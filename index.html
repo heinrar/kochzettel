@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kochzettel — Familien-Rezeptplaner</title>
+<style>
+  :root{
+    --paper:#EDE6D6;
+    --bg:#FBF8F2;
+    --card:#FFFFFF;
+    --ink:#2B2620;
+    --ink-soft:#6B6255;
+    --accent:#A8461E;
+    --accent-soft:#C89B3C;
+    --sage:#6B7A4F;
+    --line:#DCD3C0;
+    --line-strong:#C7BBA3;
+    --danger:#A8461E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+  }
+  h1,h2,h3,h4{
+    font-family:Georgia,"Palatino Linotype",Palatino,"Iowan Old Style",serif;
+    font-weight:600;
+    margin:0 0 .3em 0;
+  }
+  .app{display:none;min-height:100vh;}
+  #login-screen{display:none;min-height:100vh;align-items:center;justify-content:center;background:var(--bg);}
+  .login-card{background:var(--card);border:1px solid var(--line-strong);padding:32px;width:100%;max-width:360px;}
+  .login-card h1{font-size:1.3rem;margin-bottom:4px;}
+  .login-card p{font-size:.85rem;color:var(--ink-soft);margin:0 0 20px 0;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:230px;
+    flex-shrink:0;
+    background:var(--paper);
+    border-right:1px solid var(--line-strong);
+    display:flex;
+    flex-direction:column;
+    padding:28px 18px;
+  }
+  .brand{display:flex;align-items:flex-start;gap:10px;margin-bottom:34px;}
+  .brand svg{flex-shrink:0;margin-top:2px;}
+  .brand h1{font-size:1.15rem;line-height:1.25;}
+  .brand p{margin:2px 0 0 0;font-size:.78rem;color:var(--ink-soft);}
+  nav{display:flex;flex-direction:column;gap:2px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    text-align:left;
+    background:none;border:none;
+    border-left:3px solid transparent;
+    padding:10px 10px 10px 9px;
+    font-size:.92rem;
+    font-family:inherit;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-radius:2px;
+  }
+  .nav-item svg{flex-shrink:0;opacity:.8;}
+  .nav-item:hover{background:rgba(0,0,0,.035);color:var(--ink);}
+  .nav-item.active{
+    border-left-color:var(--accent);
+    background:rgba(168,70,30,.08);
+    color:var(--ink);
+    font-weight:600;
+  }
+  .sidebar-foot{margin-top:auto;padding-top:20px;border-top:1px dashed var(--line-strong);}
+  .sidebar-foot p{font-size:.72rem;color:var(--ink-soft);margin:0 0 10px 0;}
+
+  /* ---------- Content ---------- */
+  .content{flex:1;padding:34px 40px;max-width:1200px;}
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-head{margin-bottom:22px;}
+  .page-head p{color:var(--ink-soft);font-size:.92rem;margin:0;max-width:60ch;}
+
+  .msg{
+    display:none;
+    margin:0 0 18px 0;
+    padding:9px 14px;
+    border:1px solid var(--sage);
+    color:var(--sage);
+    background:rgba(107,122,79,.08);
+    font-size:.85rem;
+    border-radius:2px;
+  }
+  .msg.show{display:block;}
+  .msg.error{border-color:var(--danger);color:var(--danger);background:rgba(168,70,30,.08);}
+
+  /* ---------- Forms ---------- */
+  label{display:block;font-size:.8rem;color:var(--ink-soft);margin-bottom:4px;}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    font-family:inherit;
+    font-size:.92rem;
+    padding:8px 10px;
+    border:1px solid var(--line-strong);
+    background:var(--card);
+    color:var(--ink);
+    border-radius:2px;
+    width:100%;
+  }
+  textarea{resize:vertical;min-height:44px;}
+  input:focus,select:focus,textarea:focus,button:focus-visible{
+    outline:2px solid var(--accent-soft);
+    outline-offset:1px;
+  }
+  .field{margin-bottom:16px;max-width:420px;}
+  .field-row{display:flex;gap:14px;flex-wrap:wrap;}
+  .field-row .field{flex:1;min-width:140px;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border-radius:2px;
+  }
+  .btn{
+    background:var(--ink);
+    color:#fff;
+    border:1px solid var(--ink);
+    padding:9px 18px;
+    font-size:.85rem;
+    font-weight:600;
+  }
+  .btn:hover{background:#453e34;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);}
+  .btn.primary:hover{background:#8f3a18;}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong);font-weight:500;}
+  .btn.ghost:hover{background:rgba(0,0,0,.04);}
+  .btn.small{padding:5px 11px;font-size:.78rem;}
+  .btn.danger-text{background:none;border:none;color:var(--danger);font-size:.78rem;padding:4px 6px;font-weight:600;}
+  .btn.danger-text:hover{text-decoration:underline;}
+
+  fieldset{border:none;padding:0;margin:0 0 22px 0;}
+  legend{font-family:Georgia,serif;font-size:1rem;margin-bottom:10px;padding:0;}
+
+  /* star rating input */
+  .star-input{display:flex;gap:3px;}
+  .star-input button{background:none;border:none;font-size:1.4rem;line-height:1;color:var(--line-strong);padding:0 1px;}
+  .star-input button.filled{color:var(--accent-soft);}
+
+  /* ingredient entry form / added list */
+  .ing-block{border:1px dashed var(--line-strong);background:var(--paper);padding:12px;margin-bottom:16px;max-width:1000px;}
+  .ing-block-head{display:flex;gap:10px;align-items:end;margin-bottom:10px;}
+  .ing-block-head .field{margin-bottom:0;flex:1;}
+  .ing-added-list{margin-bottom:12px;}
+  .ing-table{border:1px solid var(--line);margin-bottom:12px;}
+  .ing-table-head{display:grid;grid-template-columns:20px 70px 70px 1fr auto;gap:8px;padding:6px 10px;background:var(--card);border-bottom:1px solid var(--line-strong);font-size:.72rem;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.02em;}
+  .ing-table-row{display:grid;grid-template-columns:20px 70px 70px 1fr auto;gap:8px;align-items:center;padding:7px 10px;background:var(--card);border-bottom:1px solid var(--line);font-size:.9rem;}
+  .ing-drag-handle{cursor:grab;color:var(--ink-soft);font-size:.9rem;user-select:none;text-align:center;}
+  .ing-table-row.dragging{opacity:.4;}
+  .ing-table-row.drag-over{border-top:2px solid var(--accent);}
+  .ing-table-row:last-child{border-bottom:none;}
+  .ing-row-display-actions{display:flex;gap:2px;flex-shrink:0;}
+  .ing-entry-form{border-top:1px dashed var(--line-strong);padding-top:12px;}
+  .ing-entry-line{display:grid;grid-template-columns:70px 80px 1.1fr 1fr 1fr;gap:10px;margin-bottom:10px;align-items:end;}
+  .combo-wrap{position:relative;}
+  .combo-dropdown{
+    display:none;
+    position:absolute;
+    top:100%;left:0;right:0;
+    background:var(--card);
+    border:1px solid var(--line-strong);
+    max-height:190px;
+    overflow-y:auto;
+    z-index:30;
+    box-shadow:0 4px 12px rgba(43,38,32,.12);
+  }
+  .combo-dropdown.open{display:block;}
+  .combo-option{padding:7px 10px;font-size:.88rem;cursor:pointer;}
+  .combo-option:hover,.combo-option.active{background:var(--paper);}
+  .combo-empty{padding:7px 10px;font-size:.8rem;color:var(--ink-soft);}
+  .step-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;max-width:640px;}
+  .step-num{width:22px;padding-top:9px;font-size:.85rem;color:var(--ink-soft);flex-shrink:0;text-align:right;}
+  .row-remove{background:none;border:none;color:var(--ink-soft);font-size:1.1rem;padding:6px;display:inline-flex;align-items:center;justify-content:center;}
+  .misc-delete-btn{font-size:.85rem;padding:2px;}
+  .row-remove:hover{color:var(--danger);}
+  .row-remove:disabled{opacity:.3;cursor:default;}
+
+  .perf{border:none;border-top:1px dashed var(--line-strong);margin:26px 0;}
+
+  /* ---------- Recipe cards (browse) ---------- */
+  .filters{display:flex;gap:14px;margin-bottom:20px;max-width:420px;}
+  .filters .field{margin-bottom:0;}
+  .recipe-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent-soft);
+    margin-bottom:12px;
+  }
+  .recipe-card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:7px 16px;cursor:pointer;gap:14px;
+  }
+  .recipe-card-head h3{font-size:1rem;margin:0;}
+  .recipe-meta{display:grid;grid-template-columns:100px 90px 90px 28px;align-items:center;gap:12px;font-size:.82rem;color:var(--ink-soft);flex-shrink:0;}
+  .recipe-meta .tag{justify-self:start;}
+  .recipe-meta .stars{justify-self:start;}
+  .recipe-meta span:last-child{white-space:nowrap;}
+  .tag{
+    display:inline-block;
+    padding:2px 9px;
+    background:var(--paper);
+    border:1px solid var(--line-strong);
+    font-size:.75rem;
+    color:var(--ink-soft);
+  }
+  .stars{color:var(--accent-soft);letter-spacing:1px;}
+  .recipe-card-body{display:none;padding:0 16px 16px 16px;border-top:1px dashed var(--line);}
+  .recipe-card.open .recipe-card-body{display:block;}
+  .recipe-card-body h4{font-size:.85rem;margin:14px 0 6px 0;color:var(--ink-soft);}
+  .ing-list{margin:0;padding:0;list-style:none;font-size:.9rem;}
+  .ing-list li{padding:3px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;max-width:420px;}
+  .ing-list-amt{color:var(--ink-soft);min-width:80px;flex-shrink:0;display:flex;gap:4px;}
+  .ing-list-amt .qty{width:32px;flex-shrink:0;text-align:right;}
+  .ing-list-amt .unit{width:42px;flex-shrink:0;text-align:left;white-space:nowrap;}
+  .ing-subgroup{font-size:.82rem;font-weight:600;color:var(--ink);margin:12px 0 4px 0;}
+  .steps-list{margin:0;padding-left:20px;font-size:.9rem;}
+  .steps-list li{padding:3px 0;}
+  .card-actions{margin-top:14px;display:flex;gap:8px;}
+  .empty-state{color:var(--ink-soft);font-size:.9rem;padding:24px 0;max-width:56ch;}
+
+  /* ---------- Weekly planner ---------- */
+  .week-nav{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+  .week-nav h3{margin:0;font-size:1.05rem;}
+  .week-grid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;margin-bottom:30px;overflow-x:auto;}
+  .day-col{background:var(--card);border:1px solid var(--line);min-height:130px;display:flex;flex-direction:column;}
+  .day-col-head{padding:9px 10px;border-bottom:1px solid var(--line);background:var(--paper);}
+  .day-col-head .dname{font-weight:600;font-size:.82rem;}
+  .day-col-head .ddate{font-size:.72rem;color:var(--ink-soft);}
+  .day-entries{padding:8px 10px;flex:1;display:flex;flex-direction:column;gap:6px;}
+  .day-entry{font-size:.8rem;border-bottom:1px solid var(--line);padding-bottom:5px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start;}
+  .day-entry-text{line-height:1.35;}
+  .day-entry .del{background:none;border:none;color:var(--ink-soft);font-size:.85rem;padding:0 2px;cursor:pointer;}
+  .day-entry .del:hover{color:var(--danger);}
+  .day-add{padding:8px 10px;border-top:1px dashed var(--line);}
+  .day-add select,.day-add input{font-size:.75rem;padding:5px 6px;margin-bottom:5px;}
+  .day-add button{width:100%;font-size:.72rem;padding:5px;}
+
+  details.week-hist{background:var(--card);border:1px solid var(--line);margin-bottom:10px;}
+  details.week-hist summary{padding:11px 15px;cursor:pointer;font-size:.88rem;font-weight:600;}
+  details.week-hist .hist-body{padding:0 15px 14px 15px;font-size:.85rem;color:var(--ink-soft);}
+  details.week-hist .hist-body div{padding:3px 0;}
+
+  /* ---------- Grocery list ---------- */
+  .grocery-list{max-width:520px;}
+  .grocery-list h4{border-bottom:1px solid var(--line-strong);padding-bottom:4px;margin-top:18px;}
+  .misc-group h4{margin-top:36px;}
+  .grocery-item{
+    display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+    padding:4px 0;border-bottom:1px solid var(--line);
+  }
+  .grocery-item input[type=checkbox]{width:auto;}
+  .print-checkbox{display:none;}
+  .grocery-item.checked .gi-name,.grocery-item.checked .gi-amt{text-decoration:line-through;color:var(--ink-soft);}
+  .gi-amt{font-size:.92rem;color:var(--ink-soft);white-space:nowrap;min-width:80px;flex-shrink:0;display:flex;gap:4px;}
+  .gi-amt .qty{width:32px;flex-shrink:0;text-align:right;}
+  .gi-amt .unit{width:42px;flex-shrink:0;text-align:left;}
+  .gi-name{font-size:.92rem;flex:1;}
+  .gi-detail{flex-basis:100%;font-size:.75rem;color:var(--ink-soft);margin-top:3px;}
+  .toggle-detail{background:none;border:none;color:var(--ink-soft);font-size:.72rem;text-decoration:underline;padding:0;cursor:pointer;white-space:nowrap;}
+
+  /* ---------- Ingredients / pantry page ---------- */
+  .type-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--line);background:var(--card);margin-bottom:6px;max-width:480px;}
+  .type-name{font-size:.9rem;}
+  .type-actions{display:flex;gap:2px;}
+  .ing-master-row{display:grid;grid-template-columns:1fr 170px 130px auto;gap:10px;align-items:center;padding:1px 0;border-bottom:1px solid var(--line);max-width:730px;line-height:1.1;}
+  .ing-staple-toggle{font-size:.75rem;color:var(--ink-soft);display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .ing-staple-toggle input{width:auto;}
+  .ing-master-name-input{font-size:.88rem;padding:4px 8px;}
+  .ing-master-type-combo input{padding:4px 8px;font-size:.85rem;}
+
+  @media (max-width:880px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;align-items:center;padding:14px 18px;}
+    .brand{margin-bottom:0;}
+    nav{flex-direction:row;gap:8px;margin-left:20px;overflow-x:auto;}
+    .nav-item{border-left:none;border-bottom:3px solid transparent;white-space:nowrap;}
+    .nav-item.active{border-left-color:transparent;border-bottom-color:var(--accent);}
+    .sidebar-foot{display:none;}
+    .content{padding:24px 18px;}
+    .week-grid{grid-template-columns:repeat(2,1fr);}
+    .ing-entry-line{grid-template-columns:1fr;}
+    .ing-block{max-width:100%;}
+    .ing-table-head,.ing-table-row{grid-template-columns:18px 50px 55px 1fr auto;}
+    .ing-master-row{grid-template-columns:1fr;max-width:100%;}
+  }
+
+  @page{
+    size: portrait;
+    margin: 15mm;
+  }
+
+  /* ---------- Rezeptbuch (A5-on-A4 print booklet) ---------- */
+  .a5-sheet{
+    display:flex;
+    width:289mm;
+    height:202mm;
+    page-break-after:always;
+    page-break-inside:avoid;
+  }
+  .a5-sheet:last-child{page-break-after:auto;}
+  .a5-page{
+    width:144.5mm;
+    height:202mm;
+    box-sizing:border-box;
+    padding:12mm 10mm;
+    overflow:hidden;
+    position:relative;
+    page-break-inside:avoid;
+  }
+  .a5-page + .a5-page{ border-left:1px dashed var(--line-strong); }
+  .a5-page.a5-blank{ background:repeating-linear-gradient(135deg, var(--paper), var(--paper) 10px, var(--bg) 10px, var(--bg) 20px); }
+  .a5-page h3{font-size:1.15em;margin-bottom:2px;}
+  .a5-page .a5-meta{font-size:.72em;color:var(--ink-soft);margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap;}
+  .a5-page .a5-image{width:100%;max-height:35mm;object-fit:cover;margin-bottom:8px;}
+  .a5-page h4{font-size:.85em;margin:10px 0 4px 0;color:var(--ink-soft);}
+  .a5-page .ing-list{font-size:.8em;}
+  .a5-page .ing-list li{padding:2px 0;}
+  .a5-page .ing-list-amt{min-width:56px;}
+  .a5-page .ing-list-amt .qty{width:24px;}
+  .a5-page .ing-list-amt .unit{width:32px;}
+  .a5-page .steps-list{font-size:.8em;padding-left:16px;}
+  .a5-page .steps-list li{padding:2px 0;}
+  .a5-page .a5-continued{font-size:.72em;color:var(--ink-soft);font-style:italic;margin-bottom:6px;}
+  #recipebook-output{overflow-x:auto;padding-bottom:20px;}
+  @media screen{
+    #recipebook-output .a5-page{font-size:100% !important;} /* visually back to the original, more compact size for on-screen browsing — print still uses the full generated size */
+  }
+  #recipebook-output .a5-sheet{margin-bottom:18px;border:1px solid var(--line-strong);}
+
+  @media print{
+    #recipebook-output .a5-sheet{border:none;margin-bottom:0;}
+  }
+
+  @media print{
+    .sidebar, .page-head, .week-nav button, .toggle-detail, .gi-detail, input[type=checkbox], #misc-add-form, #misc-add-heading, .misc-delete-btn{display:none !important;}
+    body, .content{background:#fff;padding:0;margin:0;}
+    .app{display:block;}
+    .content{max-width:100%;font-size:.72em;}
+    .week-nav{margin-bottom:10px;}
+    .grocery-list{max-width:100%;column-count:2;column-gap:26px;column-fill:auto;height:250mm;}
+    .grocery-group{break-inside:avoid;margin-bottom:8px;}
+    .misc-group{margin-top:16px;}
+    .grocery-item{break-inside:avoid;padding:1px 0;gap:6px;}
+    .grocery-item.checked{display:none !important;}
+    .grocery-list h4{margin-top:0;padding-bottom:1px;break-inside:avoid;break-after:avoid;}
+    .print-checkbox{display:inline-block;width:11px;height:11px;border:1.3px solid var(--ink);flex-shrink:0;}
+    .filters, .card-actions, .print-btn, .recipe-print-btn{display:none !important;}
+    #generate-recipebook-btn, #print-recipebook-btn, #recipebook-status, #recipebook-output details{display:none !important;}
+    .recipe-card-body{display:block !important;}
+    .recipe-card{break-inside:avoid;}
+    .recipe-card-head{cursor:default;}
+    body.printing-single-recipe .recipe-card:not(.print-target){display:none !important;}
+    .day-add, .day-entry .del, #week-history-heading, #week-history, .perf{display:none !important;}
+    .week-grid{gap:6px;}
+    .day-col{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-card">
+    <h1>Kochzettel</h1>
+    <p>Familien-Rezeptplaner — bitte anmelden.</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">E-Mail</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Passwort</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <div id="login-msg" class="msg error" style="display:block;min-height:1.2em;border:none;background:none;padding:0;margin-bottom:10px;"></div>
+      <button type="submit" class="btn primary" style="width:100%;">Anmelden</button>
+    </form>
+  </div>
+</div>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6"><path d="M6 3v18M6 3c0 3 3 3 3 6s-3 3-3 6M18 3v7a3 3 0 0 1-6 0V3M15 3v7"/></svg>
+      <div>
+        <h1>Kochzettel</h1>
+        <p>Rezepte &amp; Essensplanung</p>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-item active" data-page="add">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Rezept hinzufügen
+      </button>
+      <button class="nav-item" data-page="browse">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="12" height="16" rx="1"/><rect x="8" y="2" width="12" height="16" rx="1" fill="var(--bg)"/></svg>
+        Rezepte durchsuchen
+      </button>
+      <button class="nav-item" data-page="planner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="1"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Wochenplaner
+      </button>
+      <button class="nav-item" data-page="grocery">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14l-1.5 13h-11z"/><path d="M8 8h8M8 12h6"/></svg>
+        Einkaufsliste
+      </button>
+      <button class="nav-item" data-page="ingredients">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        Zutaten
+      </button>
+      <button class="nav-item" data-page="recipebook">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Rezeptbuch
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <p>Angemeldet — Ihre Daten sind in der Cloud gespeichert und mit Ihrem Konto geschützt.</p>
+      <button class="btn ghost small" id="export-btn" style="width:100%;margin-bottom:6px;">⬇ Backup exportieren</button>
+      <button class="btn ghost small" id="import-btn" style="width:100%;margin-bottom:6px;">⬆ Backup importieren</button>
+      <input type="file" id="import-file" accept="application/json" style="display:none;">
+      <button class="btn ghost small" id="logout-btn" style="width:100%;">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- ================= REZEPT HINZUFÜGEN ================= -->
+    <section id="page-add" class="page active">
+      <div class="page-head">
+        <h2 id="add-title">Rezept hinzufügen</h2>
+        <p>Füllen Sie die Details, Zutaten und Zubereitungsschritte aus. Sie können dies später unter „Rezepte durchsuchen" bearbeiten oder löschen.</p>
+      </div>
+      <div id="add-msg" class="msg"></div>
+
+      <form id="recipe-form">
+        <input type="hidden" id="recipe-id">
+
+        <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-bottom:6px;">
+          <div style="flex:1;min-width:280px;">
+            <div class="field-row">
+              <div class="field">
+                <label for="f-name">Rezeptname</label>
+                <input type="text" id="f-name" required>
+              </div>
+              <div class="field">
+                <label for="f-category-input">Kategorie</label>
+                <div class="combo-wrap" id="f-category-combo">
+                  <input type="text" id="f-category-input" autocomplete="off" placeholder="klicken für die Liste, oder tippen">
+                  <div class="combo-dropdown"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="f-servings">Grundportionen</label>
+                <input type="number" id="f-servings" min="1" step="1" value="4" required>
+              </div>
+              <div class="field">
+                <label>Bewertung</label>
+                <input type="hidden" id="f-rating" value="0">
+                <div class="star-input" id="star-input"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;">
+            <label>Bild (optional)</label>
+            <div id="recipe-image-preview-wrap" style="width:160px;height:160px;border:1px dashed var(--line-strong);background:var(--paper);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+              <span id="recipe-image-placeholder" style="font-size:.72rem;color:var(--ink-soft);text-align:center;padding:10px;">Kein Bild</span>
+              <img id="recipe-image-preview" style="display:none;width:100%;height:100%;object-fit:cover;">
+            </div>
+            <input type="file" id="recipe-image-input" accept="image/*" style="display:none;">
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <button type="button" class="btn ghost small" id="recipe-image-upload-btn">Bild wählen</button>
+              <button type="button" class="btn ghost small" id="recipe-image-remove-btn" style="display:none;">Entfernen</button>
+            </div>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend>Zutaten</legend>
+          <div id="ingredient-groups"></div>
+          <button type="button" class="btn ghost small" id="add-group-btn">+ Neue Zutatengruppe hinzufügen</button>
+        </fieldset>
+
+        <fieldset>
+          <legend>Zubereitungsschritte</legend>
+          <div id="step-rows"></div>
+          <button type="button" class="btn ghost small" id="add-step-row">+ Schritt hinzufügen</button>
+        </fieldset>
+
+        <div style="display:flex;gap:10px;margin-top:24px;">
+          <button type="submit" class="btn primary" id="save-btn">Rezept speichern</button>
+          <button type="button" class="btn ghost" id="cancel-edit-btn" style="display:none;">Bearbeitung abbrechen</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= REZEPTE DURCHSUCHEN ================= -->
+    <section id="page-browse" class="page">
+      <div class="page-head">
+        <h2>Rezepte durchsuchen</h2>
+        <p>Nach Kategorie filtern oder nach Bewertung sortieren. Klicken Sie auf ein Rezept, um Zutaten und Zubereitung zu sehen.</p>
+      </div>
+      <div class="filters">
+        <div class="field">
+          <label for="filter-category">Kategorie</label>
+          <select id="filter-category"></select>
+        </div>
+        <div class="field">
+          <label for="sort-by">Sortieren nach</label>
+          <select id="sort-by">
+            <option value="name">Name (A–Z)</option>
+            <option value="rating">Bewertung (absteigend)</option>
+          </select>
+        </div>
+      </div>
+      <div id="recipe-list"></div>
+    </section>
+
+    <!-- ================= WOCHENPLANER ================= -->
+    <section id="page-planner" class="page">
+      <div class="page-head">
+        <h2>Wochenplaner</h2>
+        <p>Wochen laufen von Samstag bis Freitag. Fügen Sie jedem Tag so viele Rezepte hinzu, wie Sie möchten, und legen Sie die gewünschte Portionenanzahl fest.</p>
+      </div>
+      <div class="week-nav">
+        <button class="btn ghost small" id="week-prev">&larr; Vorherige Woche</button>
+        <h3 id="week-range"></h3>
+        <button class="btn ghost small" id="week-next">Nächste Woche &rarr;</button>
+        <button class="btn ghost small" id="week-today">Diese Woche</button>
+        <button class="btn ghost small" id="print-planner-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:5px;"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 14h12v7H6z"/></svg>Drucken</button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+
+      <div class="perf"></div>
+      <h3 id="week-history-heading" style="font-size:1rem;margin-bottom:12px;">Letzte 3 geplante Wochen</h3>
+      <div id="week-history"></div>
+    </section>
+
+    <!-- ================= EINKAUFSLISTE ================= -->
+    <section id="page-grocery" class="page">
+      <div class="page-head">
+        <h2>Einkaufsliste</h2>
+        <p>Zutatenmengen für die ausgewählte Woche, skaliert auf die geplanten Portionen, über alle Rezepte summiert und nach Kategorie in der auf der Zutaten-Seite festgelegten Reihenfolge gruppiert.</p>
+      </div>
+      <div class="week-nav">
+        <button class="btn ghost small" id="gweek-prev">&larr; Vorherige Woche</button>
+        <h3 id="gweek-range"></h3>
+        <button class="btn ghost small" id="gweek-next">Nächste Woche &rarr;</button>
+        <button class="btn ghost small" id="print-grocery-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:5px;"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 14h12v7H6z"/></svg>Drucken</button>
+      </div>
+      <div id="grocery-note" style="font-size:.8rem;color:var(--ink-soft);margin-bottom:10px;"></div>
+      <div id="grocery-list" class="grocery-list"></div>
+      <p id="misc-add-heading" style="font-size:.82rem;color:var(--ink-soft);max-width:56ch;margin-top:20px;margin-bottom:8px;">Sonstige Artikel manuell hinzufügen</p>
+      <div id="misc-add-form" style="display:flex;gap:8px;max-width:420px;">
+        <input type="text" id="misc-item-input" placeholder="z. B. Waschmittel, Zahnpasta, Deo…" style="flex:1;">
+        <button class="btn ghost small" id="misc-add-btn">+ Hinzufügen</button>
+      </div>
+    </section>
+
+    <!-- ================= ZUTATEN (STAMMDATEN) ================= -->
+    <section id="page-ingredients" class="page">
+      <div class="page-head">
+        <h2>Zutaten</h2>
+        <p>Ihre zentrale Zutatenliste und die Einkaufskategorien, denen sie zugeordnet sind (Fleisch, Gemüse, Milchprodukte usw.). Danach werden auch Ihre Einkaufslisten gruppiert und sortiert — das richten Sie einmal ein und ändern es danach kaum noch.</p>
+      </div>
+
+      <button class="btn ghost small" id="seed-categories-btn">Kategorien &amp; Zutaten vorbelegen (Österreich-Vorlage)</button>
+      <p style="font-size:.75rem;color:var(--ink-soft);max-width:56ch;margin-top:6px;">Legt eine vorgeschlagene Reihenfolge österreichischer Einkaufskategorien an und ordnet gängige Zutaten zu. Bereits vorhandene Kategorien und Zutaten werden wiederverwendet, nicht dupliziert — neue Kategorien werden ans Ende Ihrer bestehenden Liste angehängt.</p>
+
+      <div class="perf"></div>
+
+      <h3 style="font-size:1rem;">Einkaufskategorien</h3>
+      <p style="font-size:.82rem;color:var(--ink-soft);max-width:56ch;">Die Reihenfolge hier bestimmt, in welcher Reihenfolge die Artikel auf Ihrer Einkaufsliste erscheinen — ordnen Sie sie so an, wie Sie durch den Laden gehen.</p>
+      <div id="type-list" style="margin-bottom:14px;"></div>
+      <div class="field-row" style="max-width:480px;align-items:end;">
+        <div class="field" style="margin-bottom:0;flex:1;">
+          <label for="new-type-name">Neue Kategorie</label>
+          <input type="text" id="new-type-name" placeholder="z. B. Fleisch &amp; Fisch">
+        </div>
+        <button class="btn ghost small" id="add-type-btn">+ Kategorie hinzufügen</button>
+      </div>
+
+      <div class="perf"></div>
+
+      <h3 style="font-size:1rem;">Zutaten</h3>
+      <div id="ingredient-master-list" style="margin-bottom:14px;"></div>
+      <div class="field-row" style="max-width:730px;align-items:end;">
+        <div class="field" style="margin-bottom:0;flex:1;">
+          <label for="new-ing-name">Neue Zutat</label>
+          <input type="text" id="new-ing-name" placeholder="z. B. Kartoffeln">
+        </div>
+        <div class="field" style="margin-bottom:0;flex:1;">
+          <label for="new-ing-type">Kategorie</label>
+          <div class="combo-wrap" id="new-ing-type-combo">
+            <input type="text" id="new-ing-type" autocomplete="off" placeholder="Ohne Kategorie (leer lassen) oder Kategorie wählen/eingeben">
+            <div class="combo-dropdown"></div>
+          </div>
+        </div>
+        <label class="ing-staple-toggle" style="margin-bottom:9px;">
+          <input type="checkbox" id="new-ing-staple"> Immer vorrätig
+        </label>
+        <button class="btn ghost small" id="add-ing-btn">+ Zutat hinzufügen</button>
+      </div>
+    </section>
+
+    <!-- ================= REZEPTBUCH ================= -->
+    <section id="page-recipebook" class="page">
+      <div class="page-head">
+        <h2>Rezeptbuch</h2>
+        <p>Erzeugt ein druckfertiges Buch aus allen gespeicherten Rezepten. Jedes Rezept wird — wo möglich — automatisch auf eine A5-Seite eingepasst (die Schrift wird dafür bei Bedarf etwas verkleinert); passt ein Rezept auch dann nicht, wird es auf zwei A5-Seiten aufgeteilt, die gemeinsam auf ein A4-Blatt (Querformat) gedruckt werden.</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button class="btn primary" id="generate-recipebook-btn">Rezeptbuch generieren</button>
+        <button class="btn ghost small" id="print-recipebook-btn" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:5px;"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 14h12v7H6z"/></svg>Drucken</button>
+      </div>
+      <div id="recipebook-status" style="font-size:.85rem;color:var(--ink-soft);margin-bottom:14px;"></div>
+      <div id="recipebook-output"></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* =========================================================================
+   SUPABASE SETUP
+   Same five functions the whole app already used for IndexedDB
+   (getAll / getOne / putRecord / deleteRecord / clearStore) now talk to
+   Supabase tables instead — every other function in this file (grocery
+   list math, the planner, the recipe form, backup/restore...) calls only
+   these five and needed no changes at all.
+
+   "storeName" keeps the original in-app names (recipes, weeklyPlan,
+   ingredients, ingredientTypes, miscItems); TABLE_NAMES maps those to the
+   actual Postgres table names, and FIELD_MAPS translates the handful of
+   camelCase JS field names (e.g. weekStart) to snake_case Postgres column
+   names (week_start) and back.
+   ========================================================================= */
+const SUPABASE_URL = "https://qenklokwdzersgzntjch.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_gT3T1jiM6S3fEeVqPVUI4w_i1wGzkm8";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const TABLE_NAMES = {
+  recipes: "recipes",
+  weeklyPlan: "weekly_plan",
+  ingredients: "ingredients",
+  ingredientTypes: "ingredient_types",
+  miscItems: "misc_items"
+};
+const FIELD_MAPS = {
+  recipes: {},
+  weeklyPlan: {weekStart:"week_start", dayDate:"day_date", recipeId:"recipe_id"},
+  ingredients: {typeId:"type_id", alwaysAvailable:"always_available"},
+  ingredientTypes: {order:"sort_order"},
+  miscItems: {weekStart:"week_start"}
+};
+function toDbRow(storeName, obj){
+  const map = FIELD_MAPS[storeName] || {};
+  const row = {};
+  for(const [k,v] of Object.entries(obj)){
+    if(k === "id") continue; // id is auto-generated on insert and never part of an update's SET list — updates target it via .eq() instead
+    row[map[k] || k] = v;
+  }
+  return row;
+}
+function fromDbRow(storeName, row){
+  const map = FIELD_MAPS[storeName] || {};
+  const reverse = Object.fromEntries(Object.entries(map).map(([a,b])=>[b,a]));
+  const obj = {};
+  for(const [k,v] of Object.entries(row)){
+    obj[reverse[k] || k] = v;
+  }
+  return obj;
+}
+
+async function getAll(storeName){
+  const {data, error} = await supabaseClient.from(TABLE_NAMES[storeName]).select("*");
+  if(error) throw error;
+  return data.map(row => fromDbRow(storeName, row));
+}
+async function getOne(storeName, id){
+  const {data, error} = await supabaseClient.from(TABLE_NAMES[storeName]).select("*").eq("id", id).maybeSingle();
+  if(error) throw error;
+  return data ? fromDbRow(storeName, data) : undefined;
+}
+async function putRecord(storeName, record){
+  const row = toDbRow(storeName, record);
+  if(record.id){
+    const {data, error} = await supabaseClient.from(TABLE_NAMES[storeName]).update(row).eq("id", record.id).select("id").single();
+    if(error) throw error;
+    return data.id;
+  } else {
+    const {data, error} = await supabaseClient.from(TABLE_NAMES[storeName]).insert(row).select("id").single();
+    if(error) throw error;
+    return data.id;
+  }
+}
+async function deleteRecord(storeName, id){
+  const {error} = await supabaseClient.from(TABLE_NAMES[storeName]).delete().eq("id", id);
+  if(error) throw error;
+}
+async function clearStore(storeName){
+  const {error} = await supabaseClient.from(TABLE_NAMES[storeName]).delete().neq("id", -1);
+  if(error) throw error;
+}
+
+/* =========================================================================
+   LOGIN (Supabase Auth, single shared household account)
+   ========================================================================= */
+async function checkSessionAndBoot(){
+  const {data: {session}} = await supabaseClient.auth.getSession();
+  if(session){
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+function showLogin(){
+  document.getElementById("login-screen").style.display = "flex";
+  document.querySelector(".app").style.display = "none";
+  stopInactivityTimer();
+}
+function showApp(){
+  document.getElementById("login-screen").style.display = "none";
+  document.querySelector(".app").style.display = "flex";
+  initApp();
+  startInactivityTimer();
+}
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  const msgEl = document.getElementById("login-msg");
+  msgEl.textContent = "";
+  const {error} = await supabaseClient.auth.signInWithPassword({email, password});
+  if(error){
+    msgEl.textContent = "Anmeldung fehlgeschlagen: " + error.message;
+    return;
+  }
+  showApp();
+});
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  showLogin();
+});
+
+/* =========================================================================
+   AUTO-LOGOUT AFTER INACTIVITY
+   Signs out automatically after INACTIVITY_LIMIT_MS with no clicks,
+   keypresses, or taps — not a fixed session length, so it never
+   interrupts someone actively using the app.
+   ========================================================================= */
+const INACTIVITY_LIMIT_MS = 2 * 60 * 60 * 1000; // 2 hours
+let lastActivityTime = Date.now();
+let inactivityCheckInterval = null;
+function markActivity(){ lastActivityTime = Date.now(); }
+function startInactivityTimer(){
+  markActivity();
+  ["click","keydown","mousemove","touchstart","scroll"].forEach(evt => {
+    document.addEventListener(evt, markActivity, {passive:true});
+  });
+  if(inactivityCheckInterval) clearInterval(inactivityCheckInterval);
+  inactivityCheckInterval = setInterval(async () => {
+    if(Date.now() - lastActivityTime > INACTIVITY_LIMIT_MS){
+      await supabaseClient.auth.signOut();
+      showLogin();
+    }
+  }, 60 * 1000);
+}
+function stopInactivityTimer(){
+  if(inactivityCheckInterval){ clearInterval(inactivityCheckInterval); inactivityCheckInterval = null; }
+  ["click","keydown","mousemove","touchstart","scroll"].forEach(evt => {
+    document.removeEventListener(evt, markActivity);
+  });
+}
+
+
+/* =========================================================================
+   COMMON UNITS (just a convenience autocomplete list, not a locked table)
+   ========================================================================= */
+const COMMON_UNITS = ["g","kg","ml","l","TL","EL","Tasse","Stück","Prise","Zehe","Scheibe","Dose"];
+
+/* =========================================================================
+   DATE / WEEK HELPERS  (weeks run Saturday -> Friday)
+   ========================================================================= */
+function toISODate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function fromISODate(s){
+  const [y,m,d] = s.split("-").map(Number);
+  return new Date(y, m-1, d);
+}
+function saturdayOnOrBefore(date){
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun..6=Sat
+  const diff = (day - 6 + 7) % 7;
+  d.setDate(d.getDate() - diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function addDays(date, n){
+  const d = new Date(date);
+  d.setDate(d.getDate()+n);
+  return d;
+}
+const DAY_NAMES = ["Sa","So","Mo","Di","Mi","Do","Fr"];
+function formatShort(d){
+  return d.toLocaleDateString("de-DE", {month:"short", day:"numeric"});
+}
+function weekRangeLabel(weekStartDate){
+  const end = addDays(weekStartDate, 6);
+  return `${formatShort(weekStartDate)} – ${formatShort(end)}`;
+}
+
+/* =========================================================================
+   APP STATE
+   ========================================================================= */
+let editingId = null;
+let plannerWeekStart = saturdayOnOrBefore(new Date());
+let groceryWeekStart = saturdayOnOrBefore(new Date());
+let checkedGroceryKeys = new Set(); // resets each time the list is regenerated
+let ingredientsCache = [];
+let ingredientTypesCache = [];
+
+async function loadMasterData(){
+  ingredientsCache = await getAll("ingredients");
+  ingredientTypesCache = await getAll("ingredientTypes");
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function showMsg(elId, text, isError){
+  const el = document.getElementById(elId);
+  el.textContent = text;
+  el.classList.toggle("error", !!isError);
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), isError ? 8000 : 3500);
+}
+
+/* =========================================================================
+   NAVIGATION
+   ========================================================================= */
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    const page = btn.dataset.page;
+    document.getElementById("page-"+page).classList.add("active");
+    if(page === "browse") renderBrowse();
+    if(page === "planner") renderPlanner();
+    if(page === "grocery") renderGrocery();
+    if(page === "ingredients") renderPantry();
+  });
+});
+
+/* =========================================================================
+   CATEGORY DROPDOWN (recipe categories, e.g. Frühstück/Abendessen/Dessert)
+   ========================================================================= */
+let recipeCategoriesCache = [];
+async function refreshCategoryOptions(){
+  const recipes = await getAll("recipes");
+  recipeCategoriesCache = [...new Set(recipes.map(r=>r.category).filter(Boolean))].sort();
+}
+const categoryInputEl = document.getElementById("f-category-input");
+const categoryDropdownEl = document.querySelector("#f-category-combo .combo-dropdown");
+wireCombo(categoryInputEl, categoryDropdownEl, () => recipeCategoriesCache, "Keine Übereinstimmung — wird beim Speichern als neue Kategorie angelegt.");
+function getCategoryValue(){
+  return categoryInputEl.value.trim();
+}
+
+/* =========================================================================
+   INGREDIENT AUTOCOMPLETE + CATEGORY HELPERS (used in the recipe form and
+   the pantry page)
+   ========================================================================= */
+function closeAllIngredientCombos(){
+  document.querySelectorAll(".combo-dropdown.open").forEach(d => d.classList.remove("open"));
+}
+
+// Wires a real dropdown (not the browser's native autocomplete/select) onto
+// a text field: click/focus shows the full list of options, typing filters
+// it, clicking an option fills the field. Typing something that matches
+// nothing just stays as free text — resolved (existing match, or created
+// new) when the recipe is saved.
+function wireCombo(input, dropdown, getOptionNames, emptyMessage, onSelect){
+  let activeIndex = -1;
+  let currentMatches = [];
+
+  function updateActiveHighlight(){
+    dropdown.querySelectorAll(".combo-option").forEach((opt,i) => {
+      opt.classList.toggle("active", i === activeIndex);
+    });
+    const activeEl = dropdown.querySelector(".combo-option.active");
+    if(activeEl) activeEl.scrollIntoView({block:"nearest"});
+  }
+  function render(){
+    closeAllIngredientCombos();
+    const term = input.value.trim().toLowerCase();
+    currentMatches = getOptionNames()
+      .filter(n => !term || n.toLowerCase().includes(term))
+      .sort((a,b)=>a.localeCompare(b));
+    // Once something's been typed, pre-highlight the top match so Tab
+    // accepts it right away — arrow keys still let you pick a different one.
+    activeIndex = (term && currentMatches.length > 0) ? 0 : -1;
+    if(currentMatches.length === 0){
+      dropdown.innerHTML = `<div class="combo-empty">${emptyMessage}</div>`;
+    } else {
+      dropdown.innerHTML = currentMatches.map(n=>`<div class="combo-option" data-name="${escapeAttr(n)}">${escapeHtml(n)}</div>`).join("");
+      dropdown.querySelectorAll(".combo-option").forEach(opt => {
+        opt.addEventListener("mousedown", (e) => {
+          e.preventDefault(); // keep focus so the click registers before blur closes the dropdown
+          input.value = opt.dataset.name;
+          dropdown.classList.remove("open");
+          if(onSelect) onSelect(opt.dataset.name);
+        });
+      });
+      updateActiveHighlight();
+    }
+    dropdown.classList.add("open");
+  }
+  input.addEventListener("focus", render);
+  input.addEventListener("input", render);
+  input.addEventListener("keydown", (e) => {
+    const isOpen = dropdown.classList.contains("open") && currentMatches.length > 0;
+    if(e.key === "ArrowDown"){
+      if(!isOpen) return;
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % currentMatches.length;
+      updateActiveHighlight();
+    } else if(e.key === "ArrowUp"){
+      if(!isOpen) return;
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + currentMatches.length) % currentMatches.length;
+      updateActiveHighlight();
+    } else if(e.key === "Tab"){
+      if(isOpen && activeIndex >= 0){
+        input.value = currentMatches[activeIndex];
+        dropdown.classList.remove("open");
+        if(onSelect) onSelect(currentMatches[activeIndex]);
+      }
+      // Tab is left to do its normal job (move focus onward) either way.
+    } else if(e.key === "Escape"){
+      dropdown.classList.remove("open");
+    }
+  });
+  input.addEventListener("blur", () => setTimeout(() => dropdown.classList.remove("open"), 120));
+}
+
+/* =========================================================================
+   ADD / EDIT RECIPE FORM
+   ========================================================================= */
+const ingredientGroupsEl = document.getElementById("ingredient-groups");
+const stepRowsEl = document.getElementById("step-rows");
+
+// Ingredients already added to any group in the recipe currently being
+// filled in, but not yet saved (so not in ingredientsCache yet) — merged
+// into the Zutat dropdown's suggestions so the same name can be reused
+// across groups without waiting for the recipe to be saved first.
+function getPendingFormIngredientNames(){
+  const names = new Set();
+  ingredientGroupsEl.querySelectorAll(".ing-block").forEach(block => {
+    (block._ingredients || []).forEach(e => names.add(e.name));
+  });
+  return [...names];
+}
+
+function addIngredientGroup(groupName, initialIngredients){
+  const block = document.createElement("div");
+  block.className = "ing-block";
+  block._ingredients = initialIngredients ? initialIngredients.slice() : [];
+  block._editIndex = null;
+  block.innerHTML = `
+    <div class="ing-block-head">
+      <div class="field">
+        <label>Gruppenname (optional, z. B. „Für die Soße")</label>
+        <input type="text" class="ing-block-name" placeholder="leer lassen, wenn nicht benötigt" value="${escapeAttr(groupName||'')}">
+      </div>
+      <button type="button" class="btn ghost small remove-group-btn">Gruppe entfernen</button>
+    </div>
+    <div class="ing-added-list"></div>
+    <div class="ing-entry-form">
+      <div class="ing-entry-line">
+        <div class="field" style="margin-bottom:0;">
+          <label>Menge</label>
+          <input type="number" class="ing-amount" step="any" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Einheit</label>
+          <div class="combo-wrap ing-unit-combo">
+            <input type="text" class="ing-unit" autocomplete="off" placeholder="g">
+            <div class="combo-dropdown"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Zutat</label>
+          <div class="combo-wrap ing-name-combo">
+            <input type="text" class="ing-name-input" autocomplete="off" placeholder="klicken für die Liste, oder tippen">
+            <div class="combo-dropdown"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Zubereitungshinweis (optional)</label>
+          <input type="text" class="ing-note" placeholder="z. B. gewürfelt">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Kategorie</label>
+          <div class="combo-wrap ing-type-combo">
+            <input type="text" class="ing-type-input" autocomplete="off" placeholder="Ohne Kategorie oder wählen/eingeben">
+            <div class="combo-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" class="btn ghost small ing-add-entry-btn">+ Zutat zur Liste hinzufügen</button>
+        <button type="button" class="btn ghost small ing-cancel-edit-btn">Felder leeren</button>
+      </div>
+    </div>
+  `;
+  ingredientGroupsEl.appendChild(block);
+
+  const nameInput = block.querySelector(".ing-name-input");
+  const nameDropdown = block.querySelector(".ing-name-combo .combo-dropdown");
+  const typeInput = block.querySelector(".ing-type-input");
+  function fillCategoryFromExistingIngredient(name){
+    const match = ingredientsCache.find(i => i.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if(!match) return;
+    const type = match.typeId ? ingredientTypesCache.find(t=>t.id===match.typeId) : null;
+    typeInput.value = type ? type.name : "";
+  }
+  wireCombo(nameInput, nameDropdown, () => [...new Set([...ingredientsCache.map(i=>i.name), ...getPendingFormIngredientNames()])], "Keine Übereinstimmung — wird beim Speichern als neue Zutat angelegt.", fillCategoryFromExistingIngredient);
+  nameInput.addEventListener("blur", () => fillCategoryFromExistingIngredient(nameInput.value));
+
+  const unitInput = block.querySelector(".ing-unit");
+  const unitDropdown = block.querySelector(".ing-unit-combo .combo-dropdown");
+  wireCombo(unitInput, unitDropdown, () => COMMON_UNITS, "Keine Übereinstimmung — wird als freie Einheit übernommen.");
+
+  const typeDropdown = block.querySelector(".ing-type-combo .combo-dropdown");
+  wireCombo(typeInput, typeDropdown, () => ingredientTypesCache.map(t=>t.name), `Keine Übereinstimmung — wird beim Speichern als neue Kategorie angelegt (leer lassen für „Ohne Kategorie").`);
+
+  block.querySelector(".remove-group-btn").addEventListener("click", () => {
+    if(ingredientGroupsEl.querySelectorAll(".ing-block").length <= 1){
+      alert("Mindestens eine Zutatengruppe muss vorhanden bleiben.");
+      return;
+    }
+    block.remove();
+  });
+  block.querySelector(".ing-add-entry-btn").addEventListener("click", () => commitEntryToList(block));
+  block.querySelector(".ing-cancel-edit-btn").addEventListener("click", () => {
+    if(block._editIndex !== null) cancelEntryEdit(block);
+    else clearEntryFields(block);
+  });
+
+  // Pressing Enter while filling in an ingredient field would otherwise
+  // submit (and save) the whole recipe form. Intercept it here instead:
+  // Enter in one of the entry fields adds that ingredient to the list;
+  // Enter in the group-name field just does nothing else.
+  block.addEventListener("keydown", (e) => {
+    if(e.key !== "Enter" || e.target.tagName !== "INPUT") return;
+    e.preventDefault();
+    if(e.target.classList.contains("ing-block-name")) return;
+    commitEntryToList(block);
+  });
+
+  renderAddedList(block);
+  return block;
+}
+
+// Reads the group's shared entry fields (Menge / Einheit / Zutat / Kategorie),
+// adds it to that group's ingredient list (or updates the entry being
+// edited), then clears the fields so the next ingredient can be typed.
+function commitEntryToList(block){
+  const nameInput = block.querySelector(".ing-name-input");
+  const amountInput = block.querySelector(".ing-amount");
+  const unitInput = block.querySelector(".ing-unit");
+  const typeInput = block.querySelector(".ing-type-input");
+  const noteInput = block.querySelector(".ing-note");
+  const name = nameInput.value.trim();
+  if(!name){ alert("Bitte eine Zutat eingeben."); nameInput.focus(); return; }
+
+  const entry = {
+    name,
+    amount: Number(amountInput.value) || 0,
+    unit: unitInput.value.trim(),
+    typeName: typeInput.value.trim(),
+    note: noteInput.value.trim()
+  };
+  if(block._editIndex !== null){
+    block._ingredients[block._editIndex] = entry;
+    cancelEntryEdit(block, true);
+  } else {
+    block._ingredients.push(entry);
+  }
+  nameInput.value = "";
+  amountInput.value = "";
+  unitInput.value = "";
+  typeInput.value = "";
+  noteInput.value = "";
+  renderAddedList(block);
+  amountInput.focus();
+}
+function clearEntryFields(block){
+  block.querySelector(".ing-name-input").value = "";
+  block.querySelector(".ing-amount").value = "";
+  block.querySelector(".ing-unit").value = "";
+  block.querySelector(".ing-type-input").value = "";
+  block.querySelector(".ing-note").value = "";
+}
+function cancelEntryEdit(block, skipClear){
+  block._editIndex = null;
+  block.querySelector(".ing-add-entry-btn").textContent = "+ Zutat zur Liste hinzufügen";
+  block.querySelector(".ing-cancel-edit-btn").textContent = "Felder leeren";
+  if(!skipClear) clearEntryFields(block);
+}
+function startEditEntry(block, idx){
+  const e = block._ingredients[idx];
+  block._editIndex = idx;
+  block.querySelector(".ing-name-input").value = e.name;
+  block.querySelector(".ing-amount").value = e.amount || "";
+  block.querySelector(".ing-unit").value = e.unit || "";
+  block.querySelector(".ing-type-input").value = e.typeName || "";
+  block.querySelector(".ing-note").value = e.note || "";
+  block.querySelector(".ing-add-entry-btn").textContent = "✓ Änderung übernehmen";
+  block.querySelector(".ing-cancel-edit-btn").textContent = "Abbrechen";
+  block.querySelector(".ing-amount").focus();
+}
+function renderAddedList(block){
+  const container = block.querySelector(".ing-added-list");
+  if(block._ingredients.length === 0){
+    container.innerHTML = "";
+    return;
+  }
+  const rows = block._ingredients.map((e,idx) => `
+    <div class="ing-table-row" draggable="true" data-idx="${idx}">
+      <span class="ing-drag-handle" title="Ziehen zum Umsortieren">⠿</span>
+      <span>${e.amount}</span>
+      <span>${escapeHtml(e.unit||"")}</span>
+      <span>${escapeHtml(e.name)}${e.note ? `, <span style="color:var(--ink-soft);">${escapeHtml(e.note)}</span>` : ""}</span>
+      <div class="ing-row-display-actions">
+        <button type="button" class="row-remove edit-entry-btn" title="Bearbeiten">✎</button>
+        <button type="button" class="row-remove remove-entry-btn" title="Entfernen">✕</button>
+      </div>
+    </div>`).join("");
+  container.innerHTML = `
+    <div class="ing-table">
+      <div class="ing-table-head"><span></span><span>Menge</span><span>Einheit</span><span>Zutat</span><span></span></div>
+      ${rows}
+    </div>
+  `;
+  container.querySelectorAll(".edit-entry-btn").forEach(btn => {
+    btn.addEventListener("click", () => startEditEntry(block, Number(btn.closest(".ing-table-row").dataset.idx)));
+  });
+  container.querySelectorAll(".remove-entry-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.closest(".ing-table-row").dataset.idx);
+      block._ingredients.splice(idx,1);
+      if(block._editIndex === idx) cancelEntryEdit(block);
+      renderAddedList(block);
+    });
+  });
+  wireIngredientDragReorder(block, container);
+}
+
+// Lets ingredient rows within one group be reordered by dragging them —
+// only changes the order they're stored/displayed in, nothing else.
+function wireIngredientDragReorder(block, container){
+  let dragFromIdx = null;
+  container.querySelectorAll(".ing-table-row").forEach(row => {
+    row.addEventListener("dragstart", (e) => {
+      dragFromIdx = Number(row.dataset.idx);
+      row.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      container.querySelectorAll(".ing-table-row").forEach(r => r.classList.remove("drag-over"));
+    });
+    row.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      row.classList.add("drag-over");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("drag-over");
+      const dropIdx = Number(row.dataset.idx);
+      if(dragFromIdx === null || dragFromIdx === dropIdx) return;
+      const [moved] = block._ingredients.splice(dragFromIdx, 1);
+      block._ingredients.splice(dropIdx, 0, moved);
+      dragFromIdx = null;
+      renderAddedList(block);
+    });
+  });
+}
+
+function addStepRow(text){
+  text = text || "";
+  const row = document.createElement("div");
+  row.className = "step-row";
+  row.innerHTML = `
+    <div class="step-num"></div>
+    <div style="flex:1;">
+      <textarea class="step-text" rows="2" placeholder="Diesen Schritt beschreiben">${escapeHtml(text)}</textarea>
+    </div>
+    <button type="button" class="row-remove" title="Schritt entfernen">✕</button>
+  `;
+  row.querySelector(".row-remove").addEventListener("click", () => { row.remove(); renumberSteps(); });
+  const textarea = row.querySelector(".step-text");
+  textarea.addEventListener("keydown", (e) => {
+    if(e.key !== "Tab" || e.shiftKey) return;
+    const isLastRow = row === stepRowsEl.lastElementChild;
+    if(!isLastRow) return;
+    e.preventDefault();
+    addStepRow();
+    stepRowsEl.lastElementChild.querySelector(".step-text").focus();
+  });
+  stepRowsEl.appendChild(row);
+  renumberSteps();
+}
+function renumberSteps(){
+  [...stepRowsEl.querySelectorAll(".step-row")].forEach((row,i) => {
+    row.querySelector(".step-num").textContent = (i+1)+".";
+  });
+}
+
+document.getElementById("add-group-btn").addEventListener("click", () => addIngredientGroup(""));
+document.getElementById("add-step-row").addEventListener("click", () => addStepRow());
+
+// star rating widget
+const starInput = document.getElementById("star-input");
+const ratingHidden = document.getElementById("f-rating");
+function renderStarInput(){
+  starInput.innerHTML = "";
+  for(let i=1;i<=5;i++){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = "★";
+    b.dataset.val = i;
+    b.addEventListener("click", () => {
+      ratingHidden.value = i;
+      updateStarDisplay();
+    });
+    starInput.appendChild(b);
+  }
+  updateStarDisplay();
+}
+function updateStarDisplay(){
+  const val = Number(ratingHidden.value);
+  [...starInput.children].forEach(b => {
+    b.classList.toggle("filled", Number(b.dataset.val) <= val);
+  });
+}
+renderStarInput();
+
+/* =========================================================================
+   RECIPE IMAGE (upload → resized/cropped to exactly 320×320 client-side,
+   stored as a small JPEG data URL — no server-side processing needed, and
+   never larger than one small image regardless of what was uploaded)
+   ========================================================================= */
+let currentRecipeImage = null; // data URL, or null for no image
+const IMAGE_SIZE = 320;
+
+function processImageFile(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = IMAGE_SIZE;
+        canvas.height = IMAGE_SIZE;
+        const ctx = canvas.getContext("2d");
+        const scale = Math.max(IMAGE_SIZE / img.width, IMAGE_SIZE / img.height);
+        const drawW = img.width * scale, drawH = img.height * scale;
+        ctx.drawImage(img, (IMAGE_SIZE - drawW) / 2, (IMAGE_SIZE - drawH) / 2, drawW, drawH);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => reject(new Error("Bilddatei konnte nicht gelesen werden."));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Datei konnte nicht gelesen werden."));
+    reader.readAsDataURL(file);
+  });
+}
+function setRecipeImagePreview(dataUrl){
+  currentRecipeImage = dataUrl;
+  const img = document.getElementById("recipe-image-preview");
+  const placeholder = document.getElementById("recipe-image-placeholder");
+  const removeBtn = document.getElementById("recipe-image-remove-btn");
+  if(dataUrl){
+    img.src = dataUrl;
+    img.style.display = "block";
+    placeholder.style.display = "none";
+    removeBtn.style.display = "inline-block";
+  } else {
+    img.style.display = "none";
+    img.removeAttribute("src");
+    placeholder.style.display = "block";
+    removeBtn.style.display = "none";
+  }
+}
+document.getElementById("recipe-image-upload-btn").addEventListener("click", () => {
+  document.getElementById("recipe-image-input").click();
+});
+document.getElementById("recipe-image-remove-btn").addEventListener("click", () => {
+  setRecipeImagePreview(null);
+});
+document.getElementById("recipe-image-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  try{
+    const dataUrl = await processImageFile(file);
+    setRecipeImagePreview(dataUrl);
+  }catch(err){
+    alert("Bild konnte nicht verarbeitet werden: " + (err && err.message ? err.message : err));
+  }
+});
+
+function resetForm(){
+  editingId = null;
+  document.getElementById("recipe-form").reset();
+  categoryInputEl.value = "";
+  ingredientGroupsEl.innerHTML = "";
+  stepRowsEl.innerHTML = "";
+  ratingHidden.value = 0;
+  updateStarDisplay();
+  setRecipeImagePreview(null);
+  addIngredientGroup("");
+  addStepRow();
+  document.getElementById("add-title").textContent = "Rezept hinzufügen";
+  document.getElementById("save-btn").textContent = "Rezept speichern";
+  document.getElementById("cancel-edit-btn").style.display = "none";
+}
+
+document.getElementById("cancel-edit-btn").addEventListener("click", resetForm);
+
+// Resolves one added ingredient entry (name/typeName as typed) to an
+// ingredientId: matches an existing ingredient (case-insensitive) if the
+// name matches one, otherwise creates a new ingredient (and, if needed, a
+// new grocery category) on the spot.
+async function resolveIngredientEntryToId(entry){
+  const name = entry.name.trim();
+  if(!name) return null;
+
+  const typeName = (entry.typeName||"").trim();
+  let typeId = null;
+  if(typeName){
+    const existingType = ingredientTypesCache.find(t => t.name.trim().toLowerCase() === typeName.toLowerCase());
+    if(existingType){
+      typeId = existingType.id;
+    } else {
+      const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+      typeId = await putRecord("ingredientTypes", {name: typeName, order: maxOrder+1});
+      ingredientTypesCache.push({id: typeId, name: typeName, order: maxOrder+1});
+    }
+  }
+
+  const existing = ingredientsCache.find(i => i.name.trim().toLowerCase() === name.toLowerCase());
+  if(existing){
+    // The Kategorie field doubles as a quick way to fix a miscategorized
+    // ingredient — if it was changed from what's on file, save that too.
+    if(existing.typeId !== typeId){
+      existing.typeId = typeId;
+      await putRecord("ingredients", existing);
+    }
+    return existing.id;
+  }
+
+  const newId = await putRecord("ingredients", {name, typeId});
+  ingredientsCache.push({id: newId, name, typeId});
+  return newId;
+}
+
+document.getElementById("recipe-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try{
+    const name = document.getElementById("f-name").value.trim();
+    const category = getCategoryValue();
+    const servings = Number(document.getElementById("f-servings").value) || 1;
+    const rating = Number(ratingHidden.value) || 0;
+
+    const ingredients = [];
+    for(const block of ingredientGroupsEl.querySelectorAll(".ing-block")){
+      // If something was typed into the entry fields but never clicked
+      // "+ Zutat zur Liste hinzufügen", capture it now rather than losing it.
+      if(block.querySelector(".ing-name-input").value.trim()) commitEntryToList(block);
+
+      const group = block.querySelector(".ing-block-name").value.trim();
+      for(const entry of block._ingredients){
+        const ingredientId = await resolveIngredientEntryToId(entry);
+        if(ingredientId) ingredients.push({ingredientId, amount: entry.amount, unit: entry.unit, group, note: entry.note || ""});
+      }
+    }
+
+    const steps = [...stepRowsEl.querySelectorAll(".step-text")]
+      .map(t => t.value.trim())
+      .filter(s => s);
+
+    if(!name){ showMsg("add-msg","Bitte geben Sie einen Rezeptnamen ein."); return; }
+    if(!category){ showMsg("add-msg","Bitte wählen oder erstellen Sie eine Kategorie."); return; }
+    if(ingredients.length === 0){ showMsg("add-msg","Fügen Sie mindestens eine Zutat hinzu."); return; }
+
+    const record = {name, category, servings, rating, ingredients, steps, image: currentRecipeImage};
+    if(editingId !== null) record.id = editingId;
+
+    await putRecord("recipes", record);
+    showMsg("add-msg", editingId !== null ? "Rezept aktualisiert." : "Rezept gespeichert.");
+    resetForm();
+    refreshCategoryOptions();
+  }catch(err){
+    console.error("Fehler beim Speichern des Rezepts:", err);
+    showMsg("add-msg", "Fehler beim Speichern: " + (err && err.message ? err.message : String(err)), true);
+  }
+});
+
+/* =========================================================================
+   BROWSE RECIPES
+   ========================================================================= */
+function ingredientDisplayName(row){
+  if(row.ingredientId){
+    const master = ingredientsCache.find(i=>i.id===row.ingredientId);
+    return master ? master.name : "(gelöschte Zutat)";
+  }
+  return row.name || "(unbenannte Zutat)"; // legacy rows saved before the master list existed
+}
+
+// Groups a recipe's ingredient rows by their optional "group" label (e.g.
+// "Für das Hähnchen" / "Für die Soße"), preserving the order each label
+// first appears in. Rows with no label are grouped under "" and rendered
+// without a heading.
+function renderIngredientsGrouped(ingredients){
+  const groups = new Map();
+  ingredients.forEach(row => {
+    const label = (row.group||"").trim();
+    if(!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(row);
+  });
+  let html = "";
+  groups.forEach((rows, label) => {
+    if(label) html += `<div class="ing-subgroup">${escapeHtml(label)}</div>`;
+    html += `<ul class="ing-list">${rows.map(i=>`<li><span class="ing-list-amt"><span class="qty">${i.amount}</span><span class="unit">${escapeHtml(i.unit)}</span></span><span>${escapeHtml(ingredientDisplayName(i))}${i.note ? `, <span style="color:var(--ink-soft);">${escapeHtml(i.note)}</span>` : ""}</span></li>`).join("")}</ul>`;
+  });
+  return html;
+}
+
+// Prints just one recipe: mark it, add a body flag the print stylesheet
+// keys off to hide every other card, print, then clean up afterwards.
+function printSingleRecipe(cardEl){
+  document.querySelectorAll(".recipe-card").forEach(c => c.classList.remove("print-target"));
+  cardEl.classList.add("print-target");
+  document.body.classList.add("printing-single-recipe");
+  window.print();
+}
+window.addEventListener("afterprint", () => {
+  document.body.classList.remove("printing-single-recipe");
+});
+
+async function renderBrowse(){
+  await loadMasterData();
+  const recipes = await getAll("recipes");
+  const cats = [...new Set(recipes.map(r=>r.category).filter(Boolean))].sort();
+  const filterSel = document.getElementById("filter-category");
+  const prevVal = filterSel.value;
+  filterSel.innerHTML = `<option value="">Alle Kategorien</option>` + cats.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("");
+  if(cats.includes(prevVal)) filterSel.value = prevVal;
+
+  const catFilter = filterSel.value;
+  const sortBy = document.getElementById("sort-by").value;
+
+  let list = recipes.filter(r => !catFilter || r.category === catFilter);
+  if(sortBy === "rating") list.sort((a,b) => (b.rating||0)-(a.rating||0) || a.name.localeCompare(b.name));
+  else list.sort((a,b) => a.name.localeCompare(b.name));
+
+  const container = document.getElementById("recipe-list");
+  if(list.length === 0){
+    container.innerHTML = `<div class="empty-state">Noch keine Rezepte vorhanden. Fügen Sie eines über „Rezept hinzufügen" hinzu.</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(r => `
+    <div class="recipe-card" data-id="${r.id}">
+      <div class="recipe-card-head">
+        <h3>${escapeHtml(r.name)}</h3>
+        <div class="recipe-meta">
+          <span class="tag">${escapeHtml(r.category||"—")}</span>
+          <span class="stars">${"★".repeat(r.rating||0)}${"☆".repeat(5-(r.rating||0))}</span>
+          <span>${r.servings} Portionen</span>
+          <button type="button" class="row-remove recipe-print-btn" title="Dieses Rezept drucken">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 14h12v7H6z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="recipe-card-body">
+        <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+          <div style="flex:1;min-width:260px;">
+            <h4>Zutaten (für ${r.servings} Portionen)</h4>
+            ${renderIngredientsGrouped(r.ingredients)}
+          </div>
+          ${r.image ? `<img src="${r.image}" alt="" style="width:200px;height:200px;object-fit:cover;border:1px solid var(--line);flex-shrink:0;">` : ""}
+        </div>
+        <h4>Zubereitung</h4>
+        <ol class="steps-list">
+          ${r.steps.map(s=>`<li>${escapeHtml(s)}</li>`).join("") || "<li>Keine Schritte hinzugefügt.</li>"}
+        </ol>
+        <div class="card-actions">
+          <button class="btn ghost small edit-btn">Bearbeiten</button>
+          <button class="btn danger-text delete-btn">Rezept löschen</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  container.querySelectorAll(".recipe-card-head").forEach(head => {
+    head.addEventListener("click", () => head.closest(".recipe-card").classList.toggle("open"));
+  });
+  container.querySelectorAll(".edit-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => { e.stopPropagation(); loadRecipeIntoForm(Number(btn.closest(".recipe-card").dataset.id)); });
+  });
+  container.querySelectorAll(".recipe-print-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      printSingleRecipe(btn.closest(".recipe-card"));
+    });
+  });
+  container.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if(confirm("Dieses Rezept löschen? Dies kann nicht rückgängig gemacht werden.")){
+        await deleteRecord("recipes", Number(btn.closest(".recipe-card").dataset.id));
+        renderBrowse();
+      }
+    });
+  });
+}
+
+document.getElementById("filter-category").addEventListener("change", renderBrowse);
+document.getElementById("sort-by").addEventListener("change", renderBrowse);
+
+async function loadRecipeIntoForm(id){
+  await loadMasterData();
+  const r = await getOne("recipes", id);
+  if(!r) return;
+  editingId = id;
+  document.getElementById("f-name").value = r.name;
+  await refreshCategoryOptions();
+  categoryInputEl.value = r.category;
+  document.getElementById("f-servings").value = r.servings;
+  ratingHidden.value = r.rating || 0;
+  updateStarDisplay();
+  setRecipeImagePreview(r.image || null);
+  ingredientGroupsEl.innerHTML = "";
+  if(r.ingredients.length === 0){
+    addIngredientGroup("");
+  } else {
+    const groupsMap = new Map();
+    r.ingredients.forEach(i => {
+      const label = (i.group||"").trim();
+      let ingName;
+      if(i.ingredientId){
+        const master = ingredientsCache.find(m=>m.id===i.ingredientId);
+        ingName = master ? master.name : "(gelöschte Zutat)";
+      } else {
+        ingName = i.name || "(unbenannte Zutat)"; // legacy rows saved before the master list existed
+      }
+      if(!groupsMap.has(label)) groupsMap.set(label, []);
+      groupsMap.get(label).push({name: ingName, amount: i.amount, unit: i.unit, typeName: "", note: i.note || ""});
+    });
+    groupsMap.forEach((entries, label) => addIngredientGroup(label, entries));
+  }
+  stepRowsEl.innerHTML = "";
+  r.steps.forEach(s => addStepRow(s));
+  if(r.steps.length === 0) addStepRow();
+
+  document.getElementById("add-title").textContent = "Rezept bearbeiten";
+  document.getElementById("save-btn").textContent = "Rezept aktualisieren";
+  document.getElementById("cancel-edit-btn").style.display = "inline-block";
+
+  document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelector('.nav-item[data-page="add"]').classList.add("active");
+  document.getElementById("page-add").classList.add("active");
+  window.scrollTo(0,0);
+}
+
+/* =========================================================================
+   WEEKLY PLANNER
+   ========================================================================= */
+document.getElementById("week-prev").addEventListener("click", () => { plannerWeekStart = addDays(plannerWeekStart,-7); renderPlanner(); });
+document.getElementById("week-next").addEventListener("click", () => { plannerWeekStart = addDays(plannerWeekStart,7); renderPlanner(); });
+document.getElementById("week-today").addEventListener("click", () => { plannerWeekStart = saturdayOnOrBefore(new Date()); renderPlanner(); });
+document.getElementById("print-planner-btn").addEventListener("click", () => window.print());
+
+async function renderPlanner(){
+  document.getElementById("week-range").textContent = weekRangeLabel(plannerWeekStart);
+  const recipes = await getAll("recipes");
+  recipes.sort((a,b)=>a.name.localeCompare(b.name));
+  const recipeMap = Object.fromEntries(recipes.map(r=>[r.id,r]));
+  const weekStartStr = toISODate(plannerWeekStart);
+  const allEntries = await getAll("weeklyPlan");
+  const weekEntries = allEntries.filter(e => e.weekStart === weekStartStr);
+
+  const grid = document.getElementById("week-grid");
+  grid.innerHTML = "";
+  for(let i=0;i<7;i++){
+    const dayDate = addDays(plannerWeekStart, i);
+    const dayDateStr = toISODate(dayDate);
+    const dayName = DAY_NAMES[i];
+    const entries = weekEntries.filter(e => e.dayDate === dayDateStr);
+
+    const col = document.createElement("div");
+    col.className = "day-col";
+    col.innerHTML = `
+      <div class="day-col-head">
+        <div class="dname">${dayName}</div>
+        <div class="ddate">${formatShort(dayDate)}</div>
+      </div>
+      <div class="day-entries">
+        ${entries.map(e => {
+          const r = recipeMap[e.recipeId];
+          return `<div class="day-entry">
+            <span class="day-entry-text"><strong>${r ? escapeHtml(r.name) : "(Rezept gelöscht)"}</strong><br>${e.portions} Portionen</span>
+            <button class="del" data-entry-id="${e.id}" title="Entfernen">✕</button>
+          </div>`;
+        }).join("") || ""}
+      </div>
+      <div class="day-add">
+        <select class="add-category-filter">
+          <option value="">Alle Kategorien</option>
+          ${[...new Set(recipes.map(r=>r.category).filter(Boolean))].sort().map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("")}
+        </select>
+        <select class="add-recipe-select">
+          <option value="">+ Rezept hinzufügen…</option>
+          ${recipes.map(r=>`<option value="${r.id}" data-servings="${r.servings}" data-category="${escapeAttr(r.category||'')}">${escapeHtml(r.name)}</option>`).join("")}
+        </select>
+        <input type="number" class="add-portions" min="1" step="1" placeholder="Portionen">
+        <button class="btn ghost small add-entry-btn">Hinzufügen</button>
+      </div>
+    `;
+    grid.appendChild(col);
+
+    const categoryFilter = col.querySelector(".add-category-filter");
+    const sel = col.querySelector(".add-recipe-select");
+    const portionsInput = col.querySelector(".add-portions");
+    categoryFilter.addEventListener("change", () => {
+      const chosen = categoryFilter.value;
+      sel.querySelectorAll("option[data-category]").forEach(opt => {
+        opt.style.display = (!chosen || opt.dataset.category === chosen) ? "" : "none";
+      });
+      sel.value = "";
+      portionsInput.value = "";
+    });
+    sel.addEventListener("change", () => {
+      const opt = sel.selectedOptions[0];
+      if(opt && opt.dataset.servings) portionsInput.value = opt.dataset.servings;
+    });
+    col.querySelector(".add-entry-btn").addEventListener("click", async () => {
+      const recipeId = Number(sel.value);
+      const portions = Number(portionsInput.value);
+      if(!recipeId){ alert("Bitte zuerst ein Rezept auswählen."); return; }
+      if(!portions || portions <= 0){ alert("Bitte die gewünschte Portionenanzahl eingeben."); return; }
+      await putRecord("weeklyPlan", {weekStart: weekStartStr, dayDate: dayDateStr, recipeId, portions});
+      renderPlanner();
+    });
+    col.querySelectorAll(".del").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await deleteRecord("weeklyPlan", Number(btn.dataset.entryId));
+        renderPlanner();
+      });
+    });
+  }
+
+  await renderWeekHistory(recipeMap, weekStartStr);
+}
+
+async function renderWeekHistory(recipeMap, currentWeekStartStr){
+  const allEntries = await getAll("weeklyPlan");
+  const pastWeeks = [...new Set(allEntries.map(e=>e.weekStart))]
+    .filter(ws => ws < currentWeekStartStr)
+    .sort((a,b) => b.localeCompare(a))
+    .slice(0,3);
+
+  const container = document.getElementById("week-history");
+  if(pastWeeks.length === 0){
+    container.innerHTML = `<div class="empty-state">Noch keine früheren Wochen erfasst.</div>`;
+    return;
+  }
+  container.innerHTML = pastWeeks.map(ws => {
+    const start = fromISODate(ws);
+    const entries = allEntries.filter(e => e.weekStart === ws)
+      .sort((a,b) => a.dayDate.localeCompare(b.dayDate));
+    const rows = entries.map(e => {
+      const r = recipeMap[e.recipeId];
+      const dayLabel = DAY_NAMES[(fromISODate(e.dayDate).getDay() + 1) % 7]; // map JS getDay (0=Sun) to Sat-first index
+      return `<div>${dayLabel}: ${r ? escapeHtml(r.name) : "(Rezept gelöscht)"} — ${e.portions} Portionen</div>`;
+    }).join("");
+    return `<details class="week-hist">
+      <summary>Woche vom ${weekRangeLabel(start)}</summary>
+      <div class="hist-body">${rows || "Keine Rezepte erfasst."}</div>
+    </details>`;
+  }).join("");
+}
+
+/* =========================================================================
+   GROCERY LIST
+   ========================================================================= */
+document.getElementById("gweek-prev").addEventListener("click", () => { groceryWeekStart = addDays(groceryWeekStart,-7); checkedGroceryKeys.clear(); renderGrocery(); });
+document.getElementById("gweek-next").addEventListener("click", () => { groceryWeekStart = addDays(groceryWeekStart,7); checkedGroceryKeys.clear(); renderGrocery(); });
+document.getElementById("print-grocery-btn").addEventListener("click", () => window.print());
+
+async function renderGrocery(){
+  await loadMasterData();
+  document.getElementById("gweek-range").textContent = weekRangeLabel(groceryWeekStart);
+  const weekStartStr = toISODate(groceryWeekStart);
+  const allEntries = await getAll("weeklyPlan");
+  const weekEntries = allEntries.filter(e => e.weekStart === weekStartStr);
+  const recipes = await getAll("recipes");
+  const recipeMap = Object.fromEntries(recipes.map(r=>[r.id,r]));
+  const ingredientMap = Object.fromEntries(ingredientsCache.map(i=>[i.id,i]));
+  const typeMap = Object.fromEntries(ingredientTypesCache.map(t=>[t.id,t]));
+
+  const noteEl = document.getElementById("grocery-note");
+  const listEl = document.getElementById("grocery-list");
+  const allMiscItems = await getAll("miscItems");
+  const miscItems = allMiscItems.filter(m => m.weekStart === weekStartStr);
+
+  if(weekEntries.length === 0 && miscItems.length === 0){
+    noteEl.textContent = "";
+    listEl.innerHTML = `<div class="empty-state">Für diese Woche ist noch nichts geplant. Fügen Sie Rezepte über den Wochenplaner hinzu, oder fügen Sie unten einen sonstigen Artikel hinzu.</div>`;
+    return;
+  }
+
+  const totals = new Map(); // key -> {name, unit, typeName, typeOrder, amount, contributors}
+  let missingCount = 0, zeroServingsCount = 0, staplesSkipped = new Set();
+
+  weekEntries.forEach(entry => {
+    const recipe = recipeMap[entry.recipeId];
+    if(!recipe){ missingCount++; return; }
+    let scale = 1;
+    if(recipe.servings > 0) scale = entry.portions / recipe.servings;
+    else zeroServingsCount++;
+
+    (recipe.ingredients||[]).forEach(row => {
+      let ingName, typeId, isStaple = false;
+      if(row.ingredientId){
+        const master = ingredientMap[row.ingredientId];
+        ingName = master ? master.name : "(gelöschte Zutat)";
+        typeId = master ? master.typeId : null;
+        isStaple = master ? !!master.alwaysAvailable : false;
+      } else {
+        ingName = row.name || "(unbenannte Zutat)"; // legacy rows
+        typeId = null;
+      }
+      if(isStaple){ staplesSkipped.add(ingName); return; }
+      const unit = (row.unit||"").trim();
+      const type = typeId ? typeMap[typeId] : null;
+      const typeName = type ? type.name : "Ohne Kategorie";
+      const typeOrder = type ? (type.order ?? 999) : Infinity;
+
+      const key = ingName.trim().toLowerCase()+"|"+unit.toLowerCase();
+      const amountNeeded = row.amount * scale;
+      if(!totals.has(key)){
+        totals.set(key, {name: ingName.trim(), unit, typeName, typeOrder, amount:0, contributors:[]});
+      }
+      const t = totals.get(key);
+      t.amount += amountNeeded;
+      t.contributors.push({recipeName: recipe.name, amount: Math.round(amountNeeded*100)/100});
+    });
+  });
+
+  let noteParts = [];
+  if(missingCount>0) noteParts.push(`${missingCount} geplante(s) Rezept(e) wurden gelöscht und sind in dieser Liste nicht enthalten.`);
+  if(zeroServingsCount>0) noteParts.push(`Bei einigen Rezepten sind keine Grundportionen festgelegt, daher wurden die Mengen nicht skaliert.`);
+  if(staplesSkipped.size>0) noteParts.push(`${staplesSkipped.size} als „immer vorrätig" markierte Zutat(en) wurden nicht aufgeführt.`);
+  noteEl.textContent = noteParts.join(" ");
+
+  // Group by category, in the order configured on the Ingredients page; "Ohne Kategorie" last.
+  const groupsMap = new Map();
+  [...totals.values()].forEach(r => {
+    if(!groupsMap.has(r.typeName)) groupsMap.set(r.typeName, {typeName: r.typeName, typeOrder: r.typeOrder, items: []});
+    groupsMap.get(r.typeName).items.push(r);
+  });
+  const groups = [...groupsMap.values()].sort((a,b)=>a.typeOrder-b.typeOrder);
+  groups.forEach(g => g.items.sort((a,b)=>a.name.localeCompare(b.name)));
+
+  // "Misc" is manually managed here on the grocery page only — it never
+  // touches recipes, ingredients, or their categories.
+  const miscGroupHtml = miscItems.length === 0 ? "" : `
+    <div class="grocery-group misc-group">
+      <h4>Sonstige Artikel</h4>
+      ${miscItems.map(item => {
+        const key = "misc:"+item.id;
+        const isChecked = checkedGroceryKeys.has(key);
+        return `<div class="grocery-item ${isChecked?'checked':''}" data-key="${escapeAttr(key)}">
+          <input type="checkbox" ${isChecked?'checked':''}>
+          <span class="print-checkbox"></span>
+          <span class="gi-amt"><span class="qty"></span><span class="unit"></span></span>
+          <span class="gi-name">${escapeHtml(item.name)}</span>
+          <button type="button" class="row-remove misc-delete-btn" data-id="${item.id}" title="Entfernen">✕</button>
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+
+  listEl.innerHTML = groups.map(g => `
+    <div class="grocery-group">
+      <h4>${escapeHtml(g.typeName)}</h4>
+      ${g.items.map(r => {
+        const key = r.name.toLowerCase()+"|"+r.unit.toLowerCase();
+        const amt = Math.round(r.amount*100)/100;
+        const isChecked = checkedGroceryKeys.has(key);
+        return `<div class="grocery-item ${isChecked?'checked':''}" data-key="${escapeAttr(key)}">
+          <input type="checkbox" ${isChecked?'checked':''}>
+          <span class="print-checkbox"></span>
+          <span class="gi-amt"><span class="qty">${amt}</span><span class="unit">${escapeHtml(r.unit)}</span></span>
+          <span class="gi-name">${escapeHtml(r.name)}</span>
+          <button type="button" class="toggle-detail">verwendet in ${r.contributors.length} Rezept${r.contributors.length>1?'en':''}</button>
+          <div class="gi-detail" style="display:none;">${r.contributors.map(c=>`${escapeHtml(c.recipeName)}: ${c.amount} ${escapeHtml(r.unit)}`).join(" · ")}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  `).join("") + miscGroupHtml;
+
+  listEl.querySelectorAll(".grocery-item").forEach(item => {
+    const cb = item.querySelector("input[type=checkbox]");
+    cb.addEventListener("change", () => {
+      const key = item.dataset.key;
+      if(cb.checked) checkedGroceryKeys.add(key); else checkedGroceryKeys.delete(key);
+      item.classList.toggle("checked", cb.checked);
+    });
+    const toggleBtn = item.querySelector(".toggle-detail");
+    if(toggleBtn){
+      toggleBtn.addEventListener("click", () => {
+        const d = item.querySelector(".gi-detail");
+        d.style.display = d.style.display === "none" ? "block" : "none";
+      });
+    }
+    const deleteBtn = item.querySelector(".misc-delete-btn");
+    if(deleteBtn){
+      deleteBtn.addEventListener("click", async () => {
+        await deleteRecord("miscItems", Number(deleteBtn.dataset.id));
+        checkedGroceryKeys.delete(item.dataset.key);
+        renderGrocery();
+      });
+    }
+  });
+}
+
+document.getElementById("misc-add-btn").addEventListener("click", addMiscItem);
+document.getElementById("misc-item-input").addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){ e.preventDefault(); addMiscItem(); }
+});
+async function addMiscItem(){
+  const input = document.getElementById("misc-item-input");
+  const name = input.value.trim();
+  if(!name) return;
+  await putRecord("miscItems", {weekStart: toISODate(groceryWeekStart), name});
+  input.value = "";
+  renderGrocery();
+}
+
+/* =========================================================================
+   INGREDIENTS PAGE (pantry setup: categories + master ingredient list)
+   ========================================================================= */
+/* =========================================================================
+   STARTER TEMPLATE (Austrian supermarket layout, produce-to-checkout order)
+   Used only by the "Kategorien & Zutaten vorbelegen" button below — never
+   run automatically.
+   ========================================================================= */
+const STARTER_CATEGORY_ORDER = [
+  "Obst & Gemüse",
+  "Kräuter",
+  "Kühlregal",
+  "Fleisch & Wurst",
+  "Trockensortiment",
+  "Konserven & Pasten",
+  "Öle, Essig & Würzsauce",
+  "Gewürze",
+  "Nüsse & Kerne",
+  "Backzutaten",
+  "Süßungsmittel"
+];
+const STARTER_INGREDIENTS_BY_CATEGORY = {
+  "Obst & Gemüse": ["Avocado","Weiße Zwiebel","Rote Zwiebel","Schalotte","Knoblauch","Karotten","Petersilienwurzel","Kartoffel","Zitrone","Ingwer","Koriander"],
+  "Kräuter": ["Petersilie","Liebstöckel","Estragon"],
+  "Kühlregal": ["Milch","Jogurt","gr. Jogurt","Kefir/ Buttermilch","Sauerrahm","Butter","Tofu","Eier"],
+  "Fleisch & Wurst": ["Faschiertes","Geräuchertes"],
+  "Trockensortiment": ["Reis","Pene","Zucker","Salz","Mehl"],
+  "Konserven & Pasten": ["Tomatenmark","Passata"],
+  "Öle, Essig & Würzsauce": ["Öl","Essig","Zitronensaft"],
+  "Gewürze": ["Nelken","Zimt","Kümmel","Vegeta","Knorr Cube","Kurkuma","gemahlener Kreuzkümmel","Garam Masala","Kashmiri-Chilipulver"],
+  "Nüsse & Kerne": ["Cashewkerne"],
+  "Backzutaten": ["Vaniliezucker","Backpulver"],
+  "Süßungsmittel": ["Honig"]
+};
+
+async function seedStarterCategories(){
+  const proceed = confirm(
+    "Dies legt die vorgeschlagenen Einkaufskategorien an (in dieser Reihenfolge) und ordnet " +
+    "gängige Zutaten zu. Bereits vorhandene Kategorien und Zutaten mit demselben Namen werden " +
+    "wiederverwendet, nicht dupliziert. Fortfahren?"
+  );
+  if(!proceed) return;
+
+  let categoriesCreated = 0, ingredientsCreated = 0, ingredientsReassigned = 0;
+
+  for(const catName of STARTER_CATEGORY_ORDER){
+    let type = ingredientTypesCache.find(t => t.name.trim().toLowerCase() === catName.trim().toLowerCase());
+    if(!type){
+      const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+      const newId = await putRecord("ingredientTypes", {name: catName, order: maxOrder+1});
+      type = {id:newId, name:catName, order:maxOrder+1};
+      ingredientTypesCache.push(type);
+      categoriesCreated++;
+    }
+
+    for(const ingName of (STARTER_INGREDIENTS_BY_CATEGORY[catName] || [])){
+      let ing = ingredientsCache.find(i => i.name.trim().toLowerCase() === ingName.trim().toLowerCase());
+      if(!ing){
+        const newIngId = await putRecord("ingredients", {name: ingName, typeId: type.id});
+        ingredientsCache.push({id:newIngId, name:ingName, typeId:type.id});
+        ingredientsCreated++;
+      } else if(ing.typeId !== type.id){
+        ing.typeId = type.id;
+        await putRecord("ingredients", ing);
+        ingredientsReassigned++;
+      }
+    }
+  }
+
+  await loadMasterData();
+  renderTypeList();
+  renderIngredientMasterList();
+  alert(`Fertig: ${categoriesCreated} neue Kategorie(n), ${ingredientsCreated} neue Zutat(en), ${ingredientsReassigned} Zutat(en) neu zugeordnet.`);
+}
+document.getElementById("seed-categories-btn").addEventListener("click", seedStarterCategories);
+
+async function renderPantry(){
+  await loadMasterData();
+  renderTypeList();
+  await renderIngredientMasterList();
+}
+
+function renderTypeList(){
+  const sorted = [...ingredientTypesCache].sort((a,b)=>(a.order||0)-(b.order||0));
+  const container = document.getElementById("type-list");
+  if(sorted.length===0){
+    container.innerHTML = `<div class="empty-state">Noch keine Kategorien vorhanden — fügen Sie unten eine hinzu (z. B. „Obst &amp; Gemüse", „Milchprodukte &amp; Käse", „Fleisch &amp; Fisch").</div>`;
+    return;
+  }
+  container.innerHTML = sorted.map((t,idx)=>`
+    <div class="type-row" data-id="${t.id}">
+      <span class="type-name">${escapeHtml(t.name)}</span>
+      <div class="type-actions">
+        <button class="row-remove" data-action="up" ${idx===0?'disabled':''} title="Nach oben">↑</button>
+        <button class="row-remove" data-action="down" ${idx===sorted.length-1?'disabled':''} title="Nach unten">↓</button>
+        <button class="row-remove" data-action="rename" title="Umbenennen">✎</button>
+        <button class="row-remove" data-action="delete" title="Löschen">✕</button>
+      </div>
+    </div>
+  `).join("");
+  container.querySelectorAll(".type-row").forEach(row => {
+    const id = Number(row.dataset.id);
+    row.querySelector('[data-action="up"]').addEventListener("click", () => moveType(id,-1));
+    row.querySelector('[data-action="down"]').addEventListener("click", () => moveType(id,1));
+    row.querySelector('[data-action="rename"]').addEventListener("click", () => renameType(id));
+    row.querySelector('[data-action="delete"]').addEventListener("click", () => deleteType(id));
+  });
+}
+
+async function moveType(id, dir){
+  const sorted = [...ingredientTypesCache].sort((a,b)=>(a.order||0)-(b.order||0));
+  const idx = sorted.findIndex(t=>t.id===id);
+  const swapIdx = idx+dir;
+  if(swapIdx<0 || swapIdx>=sorted.length) return;
+  const a = sorted[idx], b = sorted[swapIdx];
+  const tmp = a.order; a.order = b.order; b.order = tmp;
+  await putRecord("ingredientTypes", a);
+  await putRecord("ingredientTypes", b);
+  await loadMasterData();
+  renderTypeList();
+}
+
+async function renameType(id){
+  const t = ingredientTypesCache.find(x=>x.id===id);
+  const name = prompt("Kategorie umbenennen:", t.name);
+  if(name===null) return;
+  const trimmed = name.trim();
+  if(!trimmed) return;
+  t.name = trimmed;
+  await putRecord("ingredientTypes", t);
+  await loadMasterData();
+  renderTypeList();
+  renderIngredientMasterList();
+}
+
+async function deleteType(id){
+  const count = ingredientsCache.filter(i=>i.typeId===id).length;
+  const msg = count>0
+    ? `${count} Zutat(en) verwenden diese Kategorie — sie werden zu „Ohne Kategorie" verschoben. Trotzdem löschen?`
+    : "Diese Kategorie löschen?";
+  if(!confirm(msg)) return;
+  await deleteRecord("ingredientTypes", id);
+  await loadMasterData();
+  renderTypeList();
+  renderIngredientMasterList();
+}
+
+async function renderIngredientMasterList(){
+  const recipes = await getAll("recipes");
+  const usageCount = {};
+  recipes.forEach(r => (r.ingredients||[]).forEach(i => { if(i.ingredientId) usageCount[i.ingredientId] = (usageCount[i.ingredientId]||0)+1; }));
+
+  const typesSorted = [...ingredientTypesCache].sort((a,b)=>(a.order||0)-(b.order||0));
+  const groups = typesSorted.map(t=>({
+    type: t,
+    items: ingredientsCache.filter(i=>i.typeId===t.id).sort((a,b)=>a.name.localeCompare(b.name))
+  }));
+  const validTypeIds = new Set(typesSorted.map(t=>t.id));
+  const uncategorized = ingredientsCache.filter(i=>!i.typeId || !validTypeIds.has(i.typeId)).sort((a,b)=>a.name.localeCompare(b.name));
+  if(uncategorized.length) groups.push({type:{id:null,name:"Ohne Kategorie"}, items:uncategorized});
+
+  const container = document.getElementById("ingredient-master-list");
+  if(ingredientsCache.length===0){
+    container.innerHTML = `<div class="empty-state">Noch keine Zutaten vorhanden — fügen Sie unten eine hinzu oder direkt beim Anlegen eines Rezepts.</div>`;
+    return;
+  }
+
+  container.innerHTML = groups.filter(g=>g.items.length).map(g => `
+    <h4 style="font-size:1.05rem;color:var(--ink-soft);margin:22px 0 10px 0;">${escapeHtml(g.type.name)}</h4>
+    ${g.items.map(i => `<div class="ing-master-row" data-id="${i.id}">
+      <input type="text" class="ing-master-name-input" value="${escapeAttr(i.name)}">
+      <div class="combo-wrap ing-master-type-combo">
+        <input type="text" class="ing-master-type" autocomplete="off" value="${escapeAttr((ingredientTypesCache.find(t=>t.id===i.typeId)||{}).name||'')}" placeholder="Ohne Kategorie">
+        <div class="combo-dropdown"></div>
+      </div>
+      <label class="ing-staple-toggle"><input type="checkbox" class="ing-staple-checkbox" ${i.alwaysAvailable?'checked':''}> Immer vorrätig</label>
+      <button class="row-remove" data-action="delete" title="Löschen">✕</button>
+    </div>`).join("")}
+  `).join("");
+
+  container.querySelectorAll(".ing-master-row").forEach(row => {
+    const id = Number(row.dataset.id);
+    const ing = ingredientsCache.find(i=>i.id===id);
+    const nameInputEl = row.querySelector(".ing-master-name-input");
+    nameInputEl.addEventListener("keydown", (e) => { if(e.key === "Enter"){ e.preventDefault(); nameInputEl.blur(); } });
+    nameInputEl.addEventListener("blur", async () => {
+      const newName = nameInputEl.value.trim();
+      if(!newName){ nameInputEl.value = ing.name; return; }
+      if(newName === ing.name) return; // unchanged
+      const collision = ingredientsCache.find(i => i.id !== ing.id && i.name.trim().toLowerCase() === newName.toLowerCase());
+      if(collision){
+        alert(`„${newName}" ist bereits als eigene Zutat vorhanden. Bitte einen anderen Namen wählen.`);
+        nameInputEl.value = ing.name;
+        return;
+      }
+      ing.name = newName;
+      await putRecord("ingredients", ing);
+      await loadMasterData();
+      renderIngredientMasterList();
+    });
+    const typeInput = row.querySelector(".ing-master-type");
+    const typeDropdown = row.querySelector(".ing-master-type-combo .combo-dropdown");
+    wireCombo(typeInput, typeDropdown, () => ingredientTypesCache.map(t=>t.name), "Keine Übereinstimmung — wird beim Verlassen des Felds als neue Kategorie angelegt.");
+    typeInput.addEventListener("keydown", (e) => { if(e.key === "Enter"){ e.preventDefault(); typeInput.blur(); } });
+    row.querySelector(".ing-staple-checkbox").addEventListener("change", async (e) => {
+      ing.alwaysAvailable = e.target.checked;
+      await putRecord("ingredients", ing);
+      await loadMasterData();
+    });
+    typeInput.addEventListener("blur", async () => {
+      const typed = typeInput.value.trim();
+      const currentName = (ingredientTypesCache.find(t=>t.id===ing.typeId)||{}).name || "";
+      if(typed === currentName) return; // unchanged
+      let typeId = null;
+      if(typed){
+        const existingType = ingredientTypesCache.find(t => t.name.trim().toLowerCase() === typed.toLowerCase());
+        if(existingType){
+          typeId = existingType.id;
+        } else {
+          const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+          typeId = await putRecord("ingredientTypes", {name: typed, order: maxOrder+1});
+        }
+      }
+      ing.typeId = typeId;
+      await putRecord("ingredients", ing);
+      await loadMasterData();
+      renderTypeList();
+      renderIngredientMasterList();
+    });
+    row.querySelector('[data-action="delete"]').addEventListener("click", async () => {
+      if(usageCount[id]){
+        alert(`„${ing.name}" wird in ${usageCount[id]} Rezept(en) verwendet. Entfernen Sie die Zutat zuerst aus diesen Rezepten, um sie löschen zu können.`);
+        return;
+      }
+      if(confirm(`„${ing.name}" aus der Zutatenliste löschen?`)){
+        await deleteRecord("ingredients", id);
+        await loadMasterData();
+        renderIngredientMasterList();
+      }
+    });
+  });
+}
+
+document.getElementById("add-type-btn").addEventListener("click", async () => {
+  const input = document.getElementById("new-type-name");
+  const name = input.value.trim();
+  if(!name) return;
+  const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+  await putRecord("ingredientTypes", {name, order: maxOrder+1});
+  input.value = "";
+  await loadMasterData();
+  renderTypeList();
+});
+
+const newIngTypeInputEl = document.getElementById("new-ing-type");
+wireCombo(newIngTypeInputEl, document.querySelector("#new-ing-type-combo .combo-dropdown"), () => ingredientTypesCache.map(t=>t.name), `Keine Übereinstimmung — wird beim Hinzufügen als neue Kategorie angelegt (leer lassen für „Ohne Kategorie").`);
+
+document.getElementById("add-ing-btn").addEventListener("click", async () => {
+  const nameInput = document.getElementById("new-ing-name");
+  const name = nameInput.value.trim();
+  if(!name) return;
+  const existing = ingredientsCache.find(i=>i.name.trim().toLowerCase()===name.toLowerCase());
+  if(existing){ alert(`„${name}" ist bereits in Ihrer Zutatenliste vorhanden.`); return; }
+  const typedType = newIngTypeInputEl.value.trim();
+  let typeId = null;
+  if(typedType){
+    const existingType = ingredientTypesCache.find(t => t.name.trim().toLowerCase() === typedType.toLowerCase());
+    if(existingType){
+      typeId = existingType.id;
+    } else {
+      const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+      typeId = await putRecord("ingredientTypes", {name: typedType, order: maxOrder+1});
+    }
+  }
+  await putRecord("ingredients", {name, typeId, alwaysAvailable: document.getElementById("new-ing-staple").checked});
+  document.getElementById("new-ing-staple").checked = false;
+  nameInput.value = "";
+  newIngTypeInputEl.value = "";
+  await loadMasterData();
+  renderTypeList();
+  renderIngredientMasterList();
+});
+
+/* =========================================================================
+   BACKUP / RESTORE
+   Exports everything to a single JSON file you can save anywhere (a folder,
+   cloud drive, USB stick) — independent of this browser's storage. Import
+   reads that file back in, so you can restore here later, or move your data
+   to a different browser or computer entirely.
+   ========================================================================= */
+/* =========================================================================
+   REZEPTBUCH — auto-fit A5-per-recipe print booklet, two A5 portrait pages
+   printed side by side on one A4 landscape sheet.
+
+   How it decides layout: each recipe's content is rendered into a hidden
+   A5-sized box and measured. If it fits at full size, it's used as-is; if
+   not, the font is shrunk in a few steps until it fits on one A5 page. If
+   even the smallest size still overflows, the recipe is split across two
+   A5 pages instead (ingredient groups and steps are the split points, so a
+   group/step is never cut mid-way) — and those two pages are always kept
+   together on the same A4 sheet, leaving a facing page blank rather than
+   ever splitting one recipe across two different sheets of paper.
+   ========================================================================= */
+const A5_BOOK_SCALE = 1.2; // fixed, on purpose — keeps every recipe the same size throughout the book. Pagination is measured at this (larger, print) size so nothing risks being cut off; the on-screen preview is then visually shrunk back down via screen-only CSS, purely for easier browsing on screen.
+
+function getA5MeasureBox(){
+  let box = document.getElementById("a5-measure-box");
+  if(!box){
+    box = document.createElement("div");
+    box.id = "a5-measure-box";
+    box.className = "a5-page";
+    box.style.position = "fixed";
+    box.style.left = "-9999px";
+    box.style.top = "0";
+    box.style.visibility = "hidden";
+    document.body.appendChild(box);
+  }
+  return box;
+}
+function a5ContentFits(html, fontScale){
+  const box = getA5MeasureBox();
+  box.style.fontSize = (fontScale*100)+"%";
+  box.innerHTML = html;
+  return box.scrollHeight <= box.clientHeight + 1;
+}
+
+function buildRecipeBookChunks(recipe){
+  const chunks = [];
+  const stars = "★".repeat(recipe.rating||0) + "☆".repeat(5-(recipe.rating||0));
+  let headerHtml = `
+    <h3>${escapeHtml(recipe.name)}</h3>
+    <div class="a5-meta"><span>${escapeHtml(recipe.category||"—")}</span><span>${stars}</span><span>${recipe.servings} Portionen</span></div>
+  `;
+  if(recipe.image) headerHtml += `<img class="a5-image" src="${recipe.image}" alt="">`;
+  chunks.push({group:"header", html: headerHtml});
+
+  const groups = new Map();
+  (recipe.ingredients||[]).forEach(row => {
+    const label = (row.group||"").trim();
+    if(!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(row);
+  });
+  if(groups.size > 0){
+    chunks.push({group:"ing-heading", html: `<h4>Zutaten (für ${recipe.servings} Portionen)</h4>`});
+    groups.forEach((rows, label) => {
+      let html = label ? `<div class="ing-subgroup">${escapeHtml(label)}</div>` : "";
+      html += `<ul class="ing-list">${rows.map(i=>`<li><span class="ing-list-amt"><span class="qty">${i.amount}</span><span class="unit">${escapeHtml(i.unit)}</span></span><span>${escapeHtml(ingredientDisplayName(i))}${i.note?`, <span style="color:var(--ink-soft);">${escapeHtml(i.note)}</span>`:""}</span></li>`).join("")}</ul>`;
+      chunks.push({group:"ingredients", html});
+    });
+  }
+  if((recipe.steps||[]).length > 0){
+    chunks.push({group:"steps-heading", html: `<h4>Zubereitung</h4>`});
+    recipe.steps.forEach((s,i) => {
+      chunks.push({group:"steps", html: `<ol class="steps-list" start="${i+1}"><li>${escapeHtml(s)}</li></ol>`});
+    });
+  }
+  return chunks;
+}
+
+// Returns [{html, scale}] — one entry for a single A5 page, or two entries
+// (page 1 + page 2, continuing the same recipe) if it didn't fit on one.
+function layoutRecipeToA5Pages(recipe){
+  const chunks = buildRecipeBookChunks(recipe);
+  const fullHtml = chunks.map(c=>c.html).join("");
+  if(a5ContentFits(fullHtml, A5_BOOK_SCALE)) return [{html: fullHtml, scale: A5_BOOK_SCALE}];
+  // Doesn't fit on one page at the fixed size — split across two, always
+  // at that same fixed size (no shrinking), so every page in the book
+  // stays visually consistent. Splits land between whole ingredient
+  // groups or whole steps, never mid-way through one.
+  let page1 = "", i = 0;
+  for(; i<chunks.length; i++){
+    const candidate = page1 + chunks[i].html;
+    if(a5ContentFits(candidate, A5_BOOK_SCALE)){
+      page1 = candidate;
+    } else if(page1 === ""){
+      // Even the very first chunk alone doesn't fit — take it anyway
+      // rather than produce an empty page.
+      page1 = chunks[i].html;
+      i++;
+      break;
+    } else {
+      break;
+    }
+  }
+  const page2Chunks = chunks.slice(i);
+  const page2Html = page2Chunks.length
+    ? `<div class="a5-continued">${escapeHtml(recipe.name)} — Fortsetzung</div>` + page2Chunks.map(c=>c.html).join("")
+    : "";
+  return [{html: page1, scale: A5_BOOK_SCALE}, {html: page2Html, scale: A5_BOOK_SCALE}];
+}
+
+async function generateRecipeBook(){
+  const statusEl = document.getElementById("recipebook-status");
+  const outputEl = document.getElementById("recipebook-output");
+  const genBtn = document.getElementById("generate-recipebook-btn");
+  const printBtn = document.getElementById("print-recipebook-btn");
+  genBtn.disabled = true;
+  printBtn.style.display = "none";
+  statusEl.textContent = "Wird erstellt …";
+  outputEl.innerHTML = "";
+  try{
+    const recipes = await getAll("recipes");
+    recipes.sort((a,b) => (a.category||"").localeCompare(b.category||"") || a.name.localeCompare(b.name));
+    if(recipes.length === 0){
+      statusEl.textContent = "Noch keine Rezepte vorhanden.";
+      genBtn.disabled = false;
+      return;
+    }
+
+    // Pack pages onto A4 sheets, two A5 slots each. A recipe needing two
+    // pages always gets a whole sheet to itself, even if that leaves the
+    // previous sheet's second slot blank.
+    const sheets = [[]]; // each entry: array of up to 2 {html,scale,recipeName}|null
+    function currentSheet(){ return sheets[sheets.length-1]; }
+    for(const recipe of recipes){
+      const pages = layoutRecipeToA5Pages(recipe);
+      pages.forEach(p => p.recipeName = recipe.name);
+      if(pages.length === 1){
+        if(currentSheet().length >= 2) sheets.push([]);
+        currentSheet().push(pages[0]);
+      } else {
+        if(currentSheet().length === 1){
+          currentSheet().push(null); // leave the facing slot blank
+          sheets.push([]);
+        } else if(currentSheet().length >= 2){
+          sheets.push([]);
+        }
+        currentSheet().push(pages[0], pages[1]);
+      }
+    }
+
+    const debugLines = sheets.map((sheet, idx) => `Blatt ${idx+1}: ${sheet.map(p => p ? p.recipeName : "— leer —").join("  |  ")}`);
+    console.log("Rezeptbuch-Layout:\n" + debugLines.join("\n"));
+
+    outputEl.innerHTML = `
+      <details style="margin-bottom:16px;font-size:.8rem;color:var(--ink-soft);">
+        <summary style="cursor:pointer;">Blatt-Übersicht anzeigen (zur Fehlersuche)</summary>
+        <pre style="white-space:pre-wrap;background:var(--card);border:1px solid var(--line);padding:10px;margin-top:6px;">${escapeHtml(debugLines.join("\n"))}</pre>
+      </details>
+    ` + sheets.map(sheet => `
+      <div class="a5-sheet">
+        ${sheet.map(p => p
+          ? `<div class="a5-page" style="font-size:${p.scale*100}%;">${p.html}</div>`
+          : `<div class="a5-page a5-blank"></div>`
+        ).join("")}
+      </div>
+    `).join("");
+
+    statusEl.textContent = `${recipes.length} Rezept(e), ${sheets.length} A4-Blatt (Querformat).`;
+    printBtn.style.display = "inline-block";
+  }catch(err){
+    console.error("Rezeptbuch konnte nicht erstellt werden:", err);
+    statusEl.textContent = "Fehler: " + (err && err.message ? err.message : String(err));
+  }finally{
+    genBtn.disabled = false;
+  }
+}
+document.getElementById("generate-recipebook-btn").addEventListener("click", generateRecipeBook);
+document.getElementById("print-recipebook-btn").addEventListener("click", () => {
+  // Reliably forcing landscape/A4 via CSS named pages doesn't work
+  // consistently across browsers, so instead we swap the page orientation
+  // in for just this print job, then remove it again afterwards so every
+  // other page in the app still prints portrait as normal.
+  const style = document.createElement("style");
+  style.id = "recipebook-print-orientation";
+  style.textContent = "@page{size:A4 landscape;margin:4mm;}";
+  document.head.appendChild(style);
+  window.print();
+});
+window.addEventListener("afterprint", () => {
+  const style = document.getElementById("recipebook-print-orientation");
+  if(style) style.remove();
+});
+
+async function exportBackup(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    app: "family-recipe-planner",
+    version: 3,
+    recipes: await getAll("recipes"),
+    weeklyPlan: await getAll("weeklyPlan"),
+    ingredients: await getAll("ingredients"),
+    ingredientTypes: await getAll("ingredientTypes"),
+    miscItems: await getAll("miscItems")
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kochzettel-backup-${toISODate(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importBackup(file){
+  const text = await file.text();
+  let data;
+  try{
+    data = JSON.parse(text);
+  }catch(err){
+    alert("Diese Datei scheint kein gültiges Backup zu sein (kein lesbares JSON).");
+    return;
+  }
+  if(!data || !Array.isArray(data.recipes) || !Array.isArray(data.weeklyPlan)){
+    alert("Diese Datei scheint kein Backup des Rezeptplaners zu sein.");
+    return;
+  }
+  const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
+  const ingredientTypes = Array.isArray(data.ingredientTypes) ? data.ingredientTypes : [];
+  const miscItems = Array.isArray(data.miscItems) ? data.miscItems : [];
+
+  const proceed = confirm(
+    `Dadurch werden alle aktuell gespeicherten Daten durch den Inhalt dieses Backups ersetzt ` +
+    `(${data.recipes.length} Rezept(e), ${data.weeklyPlan.length} geplante Eintrag/Einträge, ` +
+    `${ingredients.length} Zutat(en), ${ingredientTypes.length} Kategorie(n), ${miscItems.length} sonstige Artikel). Fortfahren?`
+  );
+  if(!proceed) return;
+
+  await clearStore("recipes");
+  await clearStore("weeklyPlan");
+  await clearStore("ingredients");
+  await clearStore("ingredientTypes");
+  await clearStore("miscItems");
+  for(const r of data.recipes) await putRecord("recipes", r);
+  for(const e of data.weeklyPlan) await putRecord("weeklyPlan", e);
+  for(const i of ingredients) await putRecord("ingredients", i);
+  for(const t of ingredientTypes) await putRecord("ingredientTypes", t);
+  for(const m of miscItems) await putRecord("miscItems", m);
+
+  alert("Backup wiederhergestellt.");
+  await loadMasterData();
+  refreshCategoryOptions();
+  categoryInputEl.value = "";
+  renderPlanner();
+  renderBrowse();
+  renderGrocery();
+  renderPantry();
+}
+
+document.getElementById("export-btn").addEventListener("click", exportBackup);
+document.getElementById("import-btn").addEventListener("click", () => document.getElementById("import-file").click());
+document.getElementById("import-file").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if(file) importBackup(file);
+  e.target.value = ""; // allow re-importing the same filename later
+});
+
+/* =========================================================================
+   INIT (runs after a successful login — see checkSessionAndBoot / showApp)
+   ========================================================================= */
+async function initApp(){
+  try{
+    await loadMasterData();
+  }catch(err){
+    console.error("Konnte die Daten nicht laden:", err);
+    document.querySelector(".content").innerHTML = `
+      <div class="msg error show" style="max-width:60ch;">
+        <strong>Daten konnten nicht geladen werden.</strong><br>
+        Fehler: ${escapeHtml(err && err.message ? err.message : String(err))}<br><br>
+        Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut. Falls das Problem
+        bestehen bleibt, könnte es an den Supabase-Einstellungen liegen.
+      </div>`;
+    return;
+  }
+  resetForm();
+  refreshCategoryOptions();
+  renderPlanner();
+}
+
+checkSessionAndBoot();
+</script>
+</body>
+</html>
