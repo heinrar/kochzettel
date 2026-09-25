@@ -221,6 +221,9 @@
   .ing-list-amt .qty{width:32px;flex-shrink:0;text-align:right;}
   .ing-list-amt .unit{width:42px;flex-shrink:0;text-align:left;white-space:nowrap;}
   .ing-subgroup{font-size:.82rem;font-weight:600;color:var(--ink);margin:12px 0 4px 0;}
+  .ing-groups-wrap{display:flex;flex-wrap:wrap;gap:0 28px;}
+  .ing-group-block{flex:1 1 220px;min-width:180px;}
+  .ing-group-block .ing-list{max-width:none;}
   .steps-list{margin:0;padding-left:20px;font-size:.9rem;}
   .steps-list li{padding:3px 0;}
   .card-actions{margin-top:14px;display:flex;gap:8px;}
@@ -1475,12 +1478,13 @@ function renderIngredientsGrouped(ingredients){
     if(!groups.has(label)) groups.set(label, []);
     groups.get(label).push(row);
   });
-  let html = "";
+  let inner = "";
   groups.forEach((rows, label) => {
-    if(label) html += `<div class="ing-subgroup">${escapeHtml(label)}</div>`;
+    let html = label ? `<div class="ing-subgroup">${escapeHtml(label)}</div>` : "";
     html += `<ul class="ing-list">${rows.map(i=>`<li><span class="ing-list-amt"><span class="qty">${i.amount}</span><span class="unit">${escapeHtml(i.unit)}</span></span><span>${escapeHtml(ingredientDisplayName(i))}${i.note ? `, <span style="color:var(--ink-soft);">${escapeHtml(i.note)}</span>` : ""}</span></li>`).join("")}</ul>`;
+    inner += `<div class="ing-group-block">${html}</div>`;
   });
-  return html;
+  return `<div class="ing-groups-wrap">${inner}</div>`;
 }
 
 // Prints just one recipe: mark it, add a body flag the print stylesheet
@@ -2243,11 +2247,13 @@ function buildRecipeBookChunks(recipe){
   });
   if(groups.size > 0){
     chunks.push({group:"ing-heading", html: `<h4>Zutaten (für ${recipe.servings} Portionen)</h4>`});
+    let groupsInner = "";
     groups.forEach((rows, label) => {
       let html = label ? `<div class="ing-subgroup">${escapeHtml(label)}</div>` : "";
       html += `<ul class="ing-list">${rows.map(i=>`<li><span class="ing-list-amt"><span class="qty">${i.amount}</span><span class="unit">${escapeHtml(i.unit)}</span></span><span>${escapeHtml(ingredientDisplayName(i))}${i.note?`, <span style="color:var(--ink-soft);">${escapeHtml(i.note)}</span>`:""}</span></li>`).join("")}</ul>`;
-      chunks.push({group:"ingredients", html});
+      groupsInner += `<div class="ing-group-block">${html}</div>`;
     });
+    chunks.push({group:"ingredients", html: `<div class="ing-groups-wrap">${groupsInner}</div>`});
   }
   if((recipe.steps||[]).length > 0){
     chunks.push({group:"steps-heading", html: `<h4>Zubereitung</h4>`});
