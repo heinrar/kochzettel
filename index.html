@@ -1039,8 +1039,36 @@ function addIngredientGroup(groupName, initialIngredients){
     const type = match.typeId ? ingredientTypesCache.find(t=>t.id===match.typeId) : null;
     typeInput.value = type ? type.name : "";
   }
+  // If the Kategorie field is edited for an ingredient that already exists,
+  // save that change to the ingredient right away — no need to wait until
+  // the whole recipe is saved, same as editing it directly on the Zutaten
+  // page. A brand-new ingredient's category is still only resolved when
+  // the recipe itself is saved (see resolveIngredientEntryToId).
+  async function saveCategoryIfExistingIngredient(){
+    const name = nameInput.value.trim();
+    if(!name) return;
+    const existing = ingredientsCache.find(i => i.name.trim().toLowerCase() === name.toLowerCase());
+    if(!existing) return;
+    const typeName = typeInput.value.trim();
+    let typeId = null;
+    if(typeName){
+      const existingType = ingredientTypesCache.find(t => t.name.trim().toLowerCase() === typeName.toLowerCase());
+      if(existingType){
+        typeId = existingType.id;
+      } else {
+        const maxOrder = ingredientTypesCache.reduce((m,t)=>Math.max(m,t.order||0), -1);
+        typeId = await putRecord("ingredientTypes", {name: typeName, order: maxOrder+1});
+        ingredientTypesCache.push({id: typeId, name: typeName, order: maxOrder+1});
+      }
+    }
+    if(existing.typeId !== typeId){
+      existing.typeId = typeId;
+      await putRecord("ingredients", existing);
+    }
+  }
   wireCombo(nameInput, nameDropdown, () => [...new Set([...ingredientsCache.map(i=>i.name), ...getPendingFormIngredientNames()])], "Keine Übereinstimmung — wird beim Speichern als neue Zutat angelegt.", fillCategoryFromExistingIngredient);
   nameInput.addEventListener("blur", () => fillCategoryFromExistingIngredient(nameInput.value));
+  typeInput.addEventListener("blur", saveCategoryIfExistingIngredient);
 
   const unitInput = block.querySelector(".ing-unit");
   const unitDropdown = block.querySelector(".ing-unit-combo .combo-dropdown");
@@ -2194,7 +2222,7 @@ function a5ContentFits(html, fontScale){
   const box = getA5MeasureBox();
   box.style.fontSize = (fontScale*100)+"%";
   box.innerHTML = html;
-  return box.scrollHeight <= box.clientHeight + 1;
+  return box.scrollHeight <= box.clientHeight + 12; // small tolerance so borderline content (like one more step) isn't rejected over a few px — the page's own overflow:hidden is the real safety net if this is ever slightly too generous
 }
 
 function buildRecipeBookChunks(recipe){
