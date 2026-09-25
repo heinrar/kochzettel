@@ -2173,7 +2173,7 @@ document.getElementById("add-ing-btn").addEventListener("click", async () => {
    together on the same A4 sheet, leaving a facing page blank rather than
    ever splitting one recipe across two different sheets of paper.
    ========================================================================= */
-const A5_BOOK_SCALE = 1.2; // fixed, on purpose — keeps every recipe the same size throughout the book. Pagination is measured at this (larger, print) size so nothing risks being cut off; the on-screen preview is then visually shrunk back down via screen-only CSS, purely for easier browsing on screen.
+const A5_BOOK_SCALE = 1.44; // fixed, on purpose — keeps every recipe the same size throughout the book. Pagination is measured at this (larger, print) size so nothing risks being cut off; the on-screen preview is then visually shrunk back down via screen-only CSS, purely for easier browsing on screen.
 
 function getA5MeasureBox(){
   let box = document.getElementById("a5-measure-box");
@@ -2185,6 +2185,7 @@ function getA5MeasureBox(){
     box.style.left = "-9999px";
     box.style.top = "0";
     box.style.visibility = "hidden";
+    box.style.overflow = "visible"; // scrollHeight can be unreliable on overflow:hidden elements in some browsers — measure without it, even though the real printed page keeps overflow:hidden as a safety net
     document.body.appendChild(box);
   }
   return box;
