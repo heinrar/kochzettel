@@ -160,6 +160,9 @@
   .ing-row-display-actions{display:flex;gap:2px;flex-shrink:0;}
   .ing-entry-form{border-top:1px dashed var(--line-strong);padding-top:12px;}
   .ing-entry-line{display:grid;grid-template-columns:70px 80px 1.1fr 1fr 1fr;gap:10px;margin-bottom:10px;align-items:end;}
+  .ing-filter-panel{margin:0 0 18px;border:1px solid var(--line);background:#fff;padding:10px 14px;}
+  .ing-filter-panel summary{cursor:pointer;font-weight:600;}
+  .ing-filter-panel .ing-filter-hint{margin:8px 0 10px;font-size:13px;opacity:.75;}
   .combo-wrap{position:relative;}
   .combo-dropdown{
     display:none;
@@ -525,6 +528,16 @@
           </select>
         </div>
       </div>
+      <details id="ing-filter-panel" class="ing-filter-panel">
+        <summary>Nach Zutaten filtern</summary>
+        <p class="ing-filter-hint">Wählen Sie bis zu drei Zutaten. Es werden nur Rezepte angezeigt, die alle gewählten Zutaten enthalten.</p>
+        <div class="filters">
+          <div class="field"><label for="filter-ing-1">Zutat 1</label><select id="filter-ing-1" class="filter-ing-select"></select></div>
+          <div class="field"><label for="filter-ing-2">Zutat 2</label><select id="filter-ing-2" class="filter-ing-select"></select></div>
+          <div class="field"><label for="filter-ing-3">Zutat 3</label><select id="filter-ing-3" class="filter-ing-select"></select></div>
+          <div class="field" style="align-self:flex-end;"><button type="button" class="btn ghost small" id="filter-ing-reset">Zutaten zurücksetzen</button></div>
+        </div>
+      </details>
       <div id="recipe-list"></div>
     </section>
 
@@ -1522,16 +1535,37 @@ async function renderBrowse(){
   filterSel.innerHTML = `<option value="">Alle Kategorien</option>` + cats.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join("");
   if(cats.includes(prevVal)) filterSel.value = prevVal;
 
+  // Zutaten-Filter: nur Zutaten anbieten, die in mindestens einem Rezept vorkommen
+  const usedIds = new Set();
+  recipes.forEach(r => (r.ingredients||[]).forEach(i => { if(i.ingredientId) usedIds.add(i.ingredientId); }));
+  const usedIngredients = ingredientsCache.filter(i => usedIds.has(i.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  const ingSelects = [1,2,3].map(n => document.getElementById("filter-ing-"+n));
+  ingSelects.forEach(sel => {
+    const prev = sel.value;
+    sel.innerHTML = `<option value="">— keine —</option>` + usedIngredients.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
+    if(usedIngredients.some(i=>String(i.id)===prev)) sel.value = prev;
+  });
+  const wantedIds = ingSelects.map(sel => sel.value).filter(Boolean).map(Number);
+  if(wantedIds.length) document.getElementById("ing-filter-panel").open = true;
+
   const catFilter = filterSel.value;
   const sortBy = document.getElementById("sort-by").value;
 
   let list = recipes.filter(r => !catFilter || r.category === catFilter);
+  if(wantedIds.length){
+    list = list.filter(r => {
+      const have = new Set((r.ingredients||[]).map(i => i.ingredientId));
+      return wantedIds.every(id => have.has(id));
+    });
+  }
   if(sortBy === "rating") list.sort((a,b) => (b.rating||0)-(a.rating||0) || a.name.localeCompare(b.name));
   else list.sort((a,b) => a.name.localeCompare(b.name));
 
   const container = document.getElementById("recipe-list");
   if(list.length === 0){
-    container.innerHTML = `<div class="empty-state">Noch keine Rezepte vorhanden. Fügen Sie eines über „Rezept hinzufügen" hinzu.</div>`;
+    container.innerHTML = (recipes.length > 0 && (wantedIds.length || catFilter))
+      ? `<div class="empty-state">Keine Rezepte gefunden, die alle gewählten Filter erfüllen.</div>`
+      : `<div class="empty-state">Noch keine Rezepte vorhanden. Fügen Sie eines über „Rezept hinzufügen" hinzu.</div>`;
     return;
   }
 
@@ -1593,6 +1627,11 @@ async function renderBrowse(){
 
 document.getElementById("filter-category").addEventListener("change", renderBrowse);
 document.getElementById("sort-by").addEventListener("change", renderBrowse);
+document.querySelectorAll(".filter-ing-select").forEach(sel => sel.addEventListener("change", renderBrowse));
+document.getElementById("filter-ing-reset").addEventListener("click", () => {
+  document.querySelectorAll(".filter-ing-select").forEach(sel => sel.value = "");
+  renderBrowse();
+});
 
 async function loadRecipeIntoForm(id){
   await loadMasterData();
