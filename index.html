@@ -897,7 +897,7 @@ function closeAllIngredientCombos(){
 // it, clicking an option fills the field. Typing something that matches
 // nothing just stays as free text — resolved (existing match, or created
 // new) when the recipe is saved.
-function wireCombo(input, dropdown, getOptionNames, emptyMessage, onSelect){
+function wireCombo(input, dropdown, getOptionNames, emptyMessage, onSelect, onEnterSelect){
   let activeIndex = -1;
   let currentMatches = [];
 
@@ -954,6 +954,20 @@ function wireCombo(input, dropdown, getOptionNames, emptyMessage, onSelect){
         if(onSelect) onSelect(currentMatches[activeIndex]);
       }
       // Tab is left to do its normal job (move focus onward) either way.
+    } else if(e.key === "Enter"){
+      // Optional: Enter while a suggestion is highlighted accepts it (like
+      // Tab does) and hands over to onEnterSelect, e.g. to jump straight
+      // to the "Zutat zur Liste hinzufügen" button. Without a highlighted
+      // suggestion, Enter behaves as before.
+      if(onEnterSelect && isOpen && activeIndex >= 0){
+        e.preventDefault();
+        e.stopPropagation(); // keep the block-level Enter handler from saving the half-typed text
+        const chosen = currentMatches[activeIndex];
+        input.value = chosen;
+        dropdown.classList.remove("open");
+        if(onSelect) onSelect(chosen);
+        onEnterSelect(chosen);
+      }
     } else if(e.key === "Escape"){
       dropdown.classList.remove("open");
     }
@@ -1069,7 +1083,7 @@ function addIngredientGroup(groupName, initialIngredients){
       await putRecord("ingredients", existing);
     }
   }
-  wireCombo(nameInput, nameDropdown, () => [...new Set([...ingredientsCache.map(i=>i.name), ...getPendingFormIngredientNames()])], "Keine Übereinstimmung — wird beim Speichern als neue Zutat angelegt.", fillCategoryFromExistingIngredient);
+  wireCombo(nameInput, nameDropdown, () => [...new Set([...ingredientsCache.map(i=>i.name), ...getPendingFormIngredientNames()])], "Keine Übereinstimmung — wird beim Speichern als neue Zutat angelegt.", fillCategoryFromExistingIngredient, () => block.querySelector(".ing-add-entry-btn").focus());
   nameInput.addEventListener("blur", () => fillCategoryFromExistingIngredient(nameInput.value));
   typeInput.addEventListener("blur", saveCategoryIfExistingIngredient);
 
